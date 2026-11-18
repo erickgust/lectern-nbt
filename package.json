@@ -41,10 +41,10 @@
     "nbtify": "2.2.0",
     "oxfmt": "0.79.0",
     "oxlint": "1.94.0",
-    "oxlint-tsgolint": "7.0.2007",
     "playwright": "1.65.1",
     "prismarine-nbt": "2.8.0",
     "publint": "0.3.25",
+    "tsrs": "7.1.0-beta.tsrs3",
     "typescript": "7.0.2",
     "typescript6": "npm:typescript@6.0.3",
     "vitest": "5.1.0"
