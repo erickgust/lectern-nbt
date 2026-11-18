@@ -4,6 +4,7 @@ pre-commit:
     format:
       run: bunx oxfmt --check {staged_files}
     lint:
+      glob: "*.{ts,mts,cts,js,mjs,cjs}"
       run: bunx oxlint --type-aware --deny-warnings {staged_files}
     suppressions:
       run: bun run suppressions
