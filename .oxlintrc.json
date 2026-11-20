@@ -36,6 +36,7 @@
     "typescript/require-array-sort-compare": "error",
     "import/no-cycle": "error",
     "import/no-default-export": "error",
+    "typescript/prefer-readonly-parameter-types": "off",
     "vitest/no-standalone-expect": [
       "error",
       {
