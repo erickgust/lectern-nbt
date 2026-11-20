@@ -2,7 +2,7 @@ pre-commit:
   parallel: true
   commands:
     format:
-      run: bunx oxfmt --check {staged_files}
+      run: bunx oxfmt --check --no-error-on-unmatched-pattern {staged_files}
     lint:
       glob: "*.{ts,mts,cts,js,mjs,cjs}"
       run: bunx oxlint --type-aware --deny-warnings {staged_files}
