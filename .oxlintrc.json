@@ -58,7 +58,8 @@
       "files": ["src/internal/brand.ts"],
       "rules": {
         "typescript/consistent-type-assertions": "off",
-        "typescript/no-unsafe-type-assertion": "off"
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unnecessary-type-parameters": "off"
       }
     },
     {
@@ -76,12 +77,6 @@
             "ts-expect-error": false
           }
         ]
-      }
-    },
-    {
-      "files": ["src/index.ts"],
-      "rules": {
-        "unicorn/no-empty-file": "off"
       }
     }
   ]
