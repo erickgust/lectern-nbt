@@ -64,7 +64,7 @@ const saved = await write({
 });
 ```
 
-`read` detects gzip, zlib or no compression, and big- or little-endian byte order. `write` puts the file back the same way. Keys the codec doesn't mention (here, perhaps `UUID`) are kept in `root` and added to the returned `codec`, so writing back loses nothing. Adding `Glowing` without `extend` is a compile error, and so is `Health: 20`.
+`read` detects gzip, zlib or no compression, and big- or little-endian byte order. `write` puts the file back the same way. Keys the codec doesn't mention (here, perhaps `UUID`) are kept in `root` and added to the returned `codec`, so writing back loses nothing. Without `extend`, `write` returns an `UnknownKey` error for `Glowing`, and `Health: 20` is a compile error.
 
 Without a codec, `read` and `decode` infer one from the data. `print` turns it into source you can paste:
 
