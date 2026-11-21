@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { errorOf, root, utf } from "./nbt.js";
+import { errorOf, int32, named, root, utf } from "./nbt.js";
 
 it.each([
   ["empty input", [], "UnexpectedEnd", 0],
@@ -17,10 +17,30 @@ it.each([
   ["oversized list", [9, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 1], "UnexpectedEnd", 3],
   ["trailing bytes", [1, 0, 0, 5, 9], "TrailingBytes", 4],
   ["invalid string", [8, 0, 0, 0, 1, 0xff], "InvalidString", 3],
-  ["duplicate key", [...root(1, ...utf("a"), 1, 1, ...utf("a"), 2)], "DuplicateKey", 8],
   ["truncated byte", [1, 0, 0], "UnexpectedEnd", 3],
 ])("reports %s", (_name, bytes, kind, offset) => {
   expect(errorOf(bytes)).toEqual({ kind, offset, path: [] });
+});
+
+it.each([
+  ["a duplicate key", root(1, ...utf("a"), 1, 1, ...utf("a"), 2), "DuplicateKey", 8, ["a"]],
+  ["an oversized list", root(...named(9, "Pos", 6, ...int32(3))), "UnexpectedEnd", 9, ["Pos"]],
+  [
+    "a truncated list element",
+    root(...named(9, "L", 10, ...int32(2), 0, ...named(3, "x", 1))).subarray(0, -1),
+    "UnexpectedEnd",
+    17,
+    ["L", 1, "x"],
+  ],
+  [
+    "a bad string deep inside",
+    root(...named(10, "a", ...named(9, "b", 8, ...int32(1), 0, 1, 0xff), 0)),
+    "InvalidString",
+    16,
+    ["a", "b", 0],
+  ],
+])("gives the path to %s", (_name, bytes, kind, offset, path) => {
+  expect(errorOf(bytes)).toEqual({ kind, offset, path });
 });
 
 const nested = (depth: number): number[] => [
@@ -40,5 +60,9 @@ it("allows 512 levels of nesting", () => {
 });
 
 it("rejects 513 levels of nesting", () => {
-  expect(errorOf(nested(513))).toMatchObject({ kind: "TooDeep" });
+  expect(errorOf(nested(513))).toEqual({
+    kind: "TooDeep",
+    offset: 3 + 512 * 5,
+    path: Array.from({ length: 512 }, () => 0),
+  });
 });
