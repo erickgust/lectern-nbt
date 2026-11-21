@@ -344,5 +344,7 @@ export function readTree(bytes: Uint8Array, little: boolean, expected?: Codec): 
   } catch (error) {
     if (error instanceof RangeError) throw new ReadFailure("UnexpectedEnd", pos);
     throw error;
+  } finally {
+    emptyShape.children = undefined;
   }
 }
