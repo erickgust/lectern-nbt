@@ -8,8 +8,8 @@ This is not a drop-in replacement for NBTify.
 
 ### v1
 
-- [ ] Java edition big-endian decode/encode
-- [ ] Little-endian (Bedrock) decode/encode
+- [x] Java edition big-endian decode/encode
+- [x] Little-endian (Bedrock) decode/encode
 - [ ] gzip / zlib via DecompressionStream / CompressionStream
 - [ ] detect (compression + endianness)
 - [ ] read / write (whole files, compression and endianness kept)
