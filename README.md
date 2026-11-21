@@ -118,21 +118,23 @@ Node 26, uncompressed synthetic fixtures (`bench/fixtures`), median time per cal
 
 | Decode           | lectern-nbt | with a codec | NBTify 2.2 | prismarine-nbt 2.8 |
 | ---------------- | ----------- | ------------ | ---------- | ------------------ |
-| entities, 527 KB | 3.5 ms      | 3.4 ms       | 5.6 ms     | 4.8 ms             |
-| chunks, 305 KB   | 0.10 ms     | 0.10–0.20 ms | 1.6 ms     | 1.1 ms             |
-| strings, 157 KB  | 1.3 ms      | 1.0 ms       | 1.05 ms    | 1.2 ms             |
+| entities, 527 KB | 3.6 ms      | 3.6 ms       | 5.8 ms     | 4.9 ms             |
+| chunks, 305 KB   | 0.11 ms     | 0.10–0.20 ms | 1.6 ms     | 1.15 ms            |
+| strings, 157 KB  | 1.3 ms      | 1.1 ms       | 1.1 ms     | 1.2 ms             |
+
+On a real 9.7 MB server save (not in the repository), lectern-nbt decodes in 87 ms and NBTify in 98 ms.
 
 | Encode   | lectern-nbt | NBTify 2.2 | prismarine-nbt 2.8 |
 | -------- | ----------- | ---------- | ------------------ |
-| entities | 1.2 ms      | 3.4 ms     | 3.6 ms             |
-| chunks   | 0.13 ms     | 0.37 ms    | 0.48 ms            |
-| strings  | 0.59 ms     | 1.3 ms     | 1.4 ms             |
+| entities | 1.3 ms      | 3.3 ms     | 3.6 ms             |
+| chunks   | 0.14 ms     | 0.38 ms    | 0.48 ms            |
+| strings  | 0.60 ms     | 1.3 ms     | 1.5 ms             |
 
 | `check`  | no codec | with a codec |
 | -------- | -------- | ------------ |
-| entities | 0.62 ms  | 0.94 ms      |
-| chunks   | 1.6 µs   | 2.4 µs       |
-| strings  | 0.37 ms  | 0.43 ms      |
+| entities | 0.63 ms  | 1.1 ms       |
+| chunks   | 1.6 µs   | 2.6 µs       |
+| strings  | 0.34 ms  | 0.41 ms      |
 
 Retained memory after decoding, as a multiple of the file size, codec included:
 
@@ -140,9 +142,9 @@ Retained memory after decoding, as a multiple of the file size, codec included:
 | -------- | ----------- | ---------- | ------------------ |
 | entities | 3.1×        | 6.2×       | 7.1×               |
 | chunks   | 1.1×        | 1.1×       | 8.5×               |
-| strings  | 6.9×        | 3.3×       | 4.6×               |
+| strings  | 4.1–6.9×    | 3.3×       | 4.6×               |
 
-The strings fixture is one compound with 5,000 keys, and most of its memory is the inferred codec, which holds every key. Decoding it with a codec avoids building one.
+The strings fixture is one compound with 5,000 keys, and most of its memory is the inferred codec, which holds every key. Its result changes between runs of the same code, which is why it's a range. Decoding it with a codec avoids building one.
 
 ## Support
 
