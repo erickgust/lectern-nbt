@@ -8,6 +8,7 @@ export { decode, type DecodeOptions } from "./decode.js";
 export { detect, type Format } from "./detect.js";
 export { encode } from "./encode.js";
 export { read, write, type ReadOptions } from "./file.js";
+export { validate } from "./validate.js";
 export {
   byte,
   byteArray,
