@@ -51,6 +51,19 @@ it("reports codec errors with their paths", () => {
   });
 });
 
+it.each([
+  ["a missing key", compound({ "Ã©": byte }), { kind: "MissingKey", offset: 9, path: ["Ã©"] }],
+  [
+    "an unknown key",
+    strict(compound({ "Ã©": byte })),
+    { kind: "UnknownKey", offset: 3, path: ["é"] },
+  ],
+])("matches non-ASCII keys by their text, like decode, giving %s", (_name, codec, error) => {
+  const bytes = root(1, 0, 2, 0xc3, 0xa9, 5, 0);
+  expect(check(bytes, codec)).toEqual({ ok: false, error });
+  expect(decode(bytes, codec)).toEqual({ ok: false, error });
+});
+
 it("reads little-endian data", () => {
   expect(check(new Uint8Array([8, 0, 0, 2, 0, 0x68, 0x69]), { endian: "little" }).ok).toBe(true);
   expect(check(new Uint8Array([8, 0, 0, ...utf("hi")])).ok).toBe(true);

@@ -77,7 +77,8 @@ export function locate(
     const length = view.getUint16(at, little);
     if (length !== text.length) return false;
     for (let i = 0; i < length; i++) {
-      if (bytes[at + 2 + i] !== text.charCodeAt(i)) return false;
+      const b = bytes[at + 2 + i]!;
+      if (b >= 0x80 || b !== text.charCodeAt(i)) return false;
     }
     return true;
   }
