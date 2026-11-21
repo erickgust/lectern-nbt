@@ -4,6 +4,7 @@
   "exclude": ["test", "bench"],
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "types": []
   }
 }
