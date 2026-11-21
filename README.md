@@ -173,6 +173,8 @@ The strings fixture is one compound with 5,000 keys. lectern-nbt's extra memory 
 - [ ] Varint (network) NBT
 - [ ] Columnar (FlatNbt-style) reader, only if nbt-editor profiling shows flattening is the bottleneck
 - [ ] Region files (.mca); quansync becomes a candidate here, and only here
+- [ ] LevelDB values: several roots back to back (Bedrock chunk data)
+- [ ] Nameless root (Java network NBT, 1.20.2+)
 - [ ] Opt-in brands for specific fields, if ever needed
 
 ### Not planned
