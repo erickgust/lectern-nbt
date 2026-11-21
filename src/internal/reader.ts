@@ -208,7 +208,9 @@ export function readTree(bytes: Uint8Array, little: boolean): Tree {
     switch (type) {
       case 1: {
         codec = BYTE;
-        return toBrand<Byte>(view.getInt8(pos++));
+        const value = view.getInt8(pos);
+        pos += 1;
+        return toBrand<Byte>(value);
       }
       case 2: {
         codec = SHORT;

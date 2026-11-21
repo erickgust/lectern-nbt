@@ -18,6 +18,7 @@ it.each([
   ["trailing bytes", [1, 0, 0, 5, 9], "TrailingBytes", 4],
   ["invalid string", [8, 0, 0, 0, 1, 0xff], "InvalidString", 3],
   ["duplicate key", [...root(1, ...utf("a"), 1, 1, ...utf("a"), 2)], "DuplicateKey", 8],
+  ["truncated byte", [1, 0, 0], "UnexpectedEnd", 3],
 ])("reports %s", (_name, bytes, kind, offset) => {
   expect(errorOf(bytes)).toEqual({ kind, offset, path: [] });
 });
