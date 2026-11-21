@@ -9,10 +9,16 @@ const fixture = (name: string): Buffer =>
 
 for (const name of ["entities", "chunks", "strings"]) {
   const bytes = fixture(name);
+  const inferred = decode(bytes);
+  if (!inferred.ok) throw new Error(inferred.error.kind);
+  const { codec } = inferred.value;
   summary(() => {
     group(`${name} ${(bytes.length / 1024).toFixed(0)} KB`, () => {
       bench("lectern-nbt", () => {
         do_not_optimize(decode(bytes));
+      });
+      bench("lectern-nbt with its codec", () => {
+        do_not_optimize(decode(bytes, codec));
       });
       bench("nbtify", async () => {
         do_not_optimize(await read(bytes, { rootName: true, endian: "big", compression: null }));
