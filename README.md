@@ -64,7 +64,7 @@ const saved = await write({
 });
 ```
 
-`read` detects gzip, zlib or no compression, and big- or little-endian byte order. `write` puts the file back the same way. Keys the codec doesn't mention (here, perhaps `UUID`) are kept in `root` and added to the returned `codec`, so writing back loses nothing. Without `extend`, `write` returns an `UnknownKey` error for `Glowing`, and `Health: 20` is a compile error.
+`read` detects gzip, zlib or no compression, big- or little-endian byte order, and the 8-byte header of a Bedrock `level.dat`, whose storage version it keeps in `storageVersion`. `write` puts the file back the same way, header included. Keys the codec doesn't mention (here, perhaps `UUID`) are kept in `root` and added to the returned `codec`, so writing back loses nothing. Without `extend`, `write` returns an `UnknownKey` error for `Glowing`, and `Health: 20` is a compile error.
 
 Without a codec, `read` and `decode` infer one from the data. `print` turns it into source you can paste:
 
@@ -110,7 +110,7 @@ Codec builders: `compound`, `list`, `optional`, `strict` (extra keys become an e
 - A float or double `NaN` may lose its payload bits in a round trip.
 - Round trips are byte-exact when the compounds in a list share key order and empty lists are End-typed, which is how Minecraft writes files. The data is always equal, but a list element whose keys were in another order comes back in the merged codec's order.
 - `print` can't keep the order of integer-like keys (`"0"`, `"12"`), because JavaScript orders them numerically in object literals.
-- Bedrock `level.dat` files, which have an 8-byte header, and Bedrock network NBT, which uses varints, aren't supported yet.
+- Bedrock network NBT, which uses varints, isn't supported yet.
 
 ## Benchmarks
 
@@ -155,6 +155,7 @@ The strings fixture is one compound with 5,000 keys. lectern-nbt's extra memory 
 - [x] gzip / zlib via DecompressionStream / CompressionStream
 - [x] detect (compression + endianness)
 - [x] read / write (whole files, compression and endianness kept)
+- [x] Bedrock level.dat header
 - [x] Structure-only fast path (check)
 - [x] Codec builders, Infer, validate, extend, strict, optional
 - [x] Number/array constructors with range checks
@@ -170,7 +171,6 @@ The strings fixture is one compound with 5,000 keys. lectern-nbt's extra memory 
 - [ ] CLI: `lectern-nbt infer level.dat > level.ts`
 - [ ] SNBT parse / stringify
 - [ ] Varint (network) NBT
-- [ ] Bedrock level.dat header
 - [ ] Columnar (FlatNbt-style) reader, only if nbt-editor profiling shows flattening is the bottleneck
 - [ ] Region files (.mca); quansync becomes a candidate here, and only here
 - [ ] Opt-in brands for specific fields, if ever needed
