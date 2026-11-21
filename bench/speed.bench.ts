@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { bench, do_not_optimize, group, run, summary } from "mitata";
-import { read } from "nbtify";
-import { parseUncompressed } from "prismarine-nbt";
-import { decode } from "../src/index.js";
+import { read, write } from "nbtify";
+import { parseUncompressed, writeUncompressed } from "prismarine-nbt";
+import { decode, encode } from "../src/index.js";
 
 const fixture = (name: string): Buffer =>
   readFileSync(new URL(`fixtures/${name}.nbt`, import.meta.url));
@@ -25,6 +25,28 @@ for (const name of ["entities", "chunks", "strings"]) {
       });
       bench("prismarine-nbt", () => {
         do_not_optimize(parseUncompressed(bytes, "big"));
+      });
+    });
+  });
+}
+
+for (const name of ["entities", "chunks", "strings"]) {
+  const bytes = fixture(name);
+  const ours = decode(bytes);
+  if (!ours.ok) throw new Error(ours.error.kind);
+  const doc = ours.value;
+  const theirs = await read(bytes, { rootName: true, endian: "big", compression: null });
+  const prismarine = parseUncompressed(bytes, "big");
+  summary(() => {
+    group(`encode ${name}`, () => {
+      bench("lectern-nbt", () => {
+        do_not_optimize(encode(doc));
+      });
+      bench("nbtify", async () => {
+        do_not_optimize(await write(theirs));
+      });
+      bench("prismarine-nbt", () => {
+        do_not_optimize(writeUncompressed(prismarine, "big"));
       });
     });
   });
