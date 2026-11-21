@@ -16,7 +16,7 @@ This is not a drop-in replacement for NBTify.
 - [ ] Structure-only fast path (check)
 - [ ] Codec builders, Infer, validate, extend, strict, optional
 - [ ] Number/array constructors with range checks
-- [ ] Codec inference
+- [x] Codec inference
 - [ ] Paths on every error
 - [ ] print (codec → TypeScript source)
 
