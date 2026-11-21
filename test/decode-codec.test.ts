@@ -15,23 +15,15 @@ import {
   short,
   strict,
   string,
-  type Codec,
   type MixedListCodec,
-  type NbtDocument,
 } from "../src/index.js";
-import { decoded, fixture, fixtures, int32, named, nbtify, root, utf } from "./nbt.js";
+import { decoded, decodedWith, fixture, fixtures, int32, named, nbtify, root, utf } from "./nbt.js";
 
 const Item = compound({ id: string, Count: byte, Slot: optional(byte) });
 const Player = compound({ Name: string, Health: float, Pos: list(double), Inventory: list(Item) });
 const Small = compound({ a: int, l: list(byte), s: optional(string) });
 const Abc = compound({ a: byte, b: byte, c: byte });
 const mixed: MixedListCodec = { tag: 9, items: [list(byte), list(string)] };
-
-function decodedWith<C extends Codec>(bytes: Uint8Array, codec: C): NbtDocument<C> {
-  const result = decode(bytes, codec);
-  if (!result.ok) throw new Error(`${result.error.kind} at ${result.error.path.join(".")}`);
-  return result.value;
-}
 
 const player = {
   Name: "Steve",

@@ -1,5 +1,6 @@
 import type { Codec, CompoundCodec, ListCodec, MixedListCodec, NbtValue } from "../codec.js";
 import {
+  HOST_LITTLE,
   MAX_DEPTH,
   ReadFailure,
   arrayLength,
@@ -44,8 +45,6 @@ export interface Tree {
   readonly root: NbtValue;
   readonly codec: Codec;
 }
-
-const HOST_LITTLE = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
 
 function swap32(x: number): number {
   return ((x & 0xff) << 24) | ((x & 0xff00) << 8) | ((x >>> 8) & 0xff00) | (x >>> 24);

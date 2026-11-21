@@ -5,6 +5,7 @@ import {
   compound,
   decode,
   double,
+  encode,
   extend,
   float,
   int,
@@ -19,6 +20,7 @@ import {
   type Byte,
   type Codec,
   type DecodeError,
+  type EncodeError,
   type Double,
   type Float,
   type Infer,
@@ -29,8 +31,6 @@ import {
   type Result,
   type Short,
 } from "../../src/index.js";
-
-declare function encode<C extends Codec>(doc: NbtDocument<C>): C;
 
 const Item = compound({ id: string, Count: byte, Slot: optional(byte) });
 const Player = compound({
@@ -80,7 +80,7 @@ test("brand table", () => {
 
 test("encode(doc) takes its type from the codec", () => {
   expectTypeOf(encode({ ...doc, root: { ...doc.root, Health: float(20) } })).toEqualTypeOf<
-    typeof Player
+    Result<Uint8Array, EncodeError>
   >();
   // @ts-expect-error
   encode({ ...doc, root: { ...doc.root, Health: 20 } });
@@ -88,13 +88,12 @@ test("encode(doc) takes its type from the codec", () => {
   encode({ ...doc, root: { ...doc.root, Glowing: byte(1) } });
   // @ts-expect-error
   encode({ ...doc, codec: extend(doc.codec, { Glowing: byte }) });
-  const extended = encode({
+  encode({
     ...doc,
     root: { ...doc.root, Glowing: byte(1) },
     codec: extend(doc.codec, { Glowing: byte }),
   });
-  expectTypeOf<Infer<typeof extended>["Glowing"]>().toEqualTypeOf<Byte>();
-  expectTypeOf(encode({ ...doc, codec: strict(doc.codec) })).toEqualTypeOf<typeof Player>();
+  encode({ ...doc, codec: strict(doc.codec) });
 });
 
 test("constructor return types", () => {

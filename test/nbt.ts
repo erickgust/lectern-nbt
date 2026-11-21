@@ -16,6 +16,12 @@ export function decoded(bytes: Uint8Array, endian: "big" | "little" = "big"): Nb
   return result.value;
 }
 
+export function decodedWith<C extends Codec>(bytes: Uint8Array, codec: C): NbtDocument<C> {
+  const result = decode(bytes, codec);
+  if (!result.ok) throw new Error(`${result.error.kind} at ${result.error.path.join(".")}`);
+  return result.value;
+}
+
 export function errorOf(bytes: readonly number[] | Uint8Array): DecodeError | undefined {
   const result = decode(new Uint8Array(bytes));
   return result.ok ? undefined : result.error;

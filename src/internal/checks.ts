@@ -29,7 +29,9 @@ export class ReadFailure extends Error {
   }
 }
 
-const TAG_NAMES: readonly TagName[] = [
+export const HOST_LITTLE: boolean = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+
+export const TAG_NAMES: readonly TagName[] = [
   "end",
   "byte",
   "short",
