@@ -1,0 +1,40 @@
+import { readFileSync } from "node:fs";
+import { bench, do_not_optimize, group, run, summary } from "mitata";
+import { read } from "nbtify";
+import { parseUncompressed } from "prismarine-nbt";
+import { decode } from "../src/index.js";
+
+const fixture = (name: string): Buffer =>
+  readFileSync(new URL(`fixtures/${name}.nbt`, import.meta.url));
+
+for (const name of ["entities", "chunks", "strings"]) {
+  const bytes = fixture(name);
+  summary(() => {
+    group(`${name} ${(bytes.length / 1024).toFixed(0)} KB`, () => {
+      bench("lectern-nbt", () => {
+        do_not_optimize(decode(bytes));
+      });
+      bench("nbtify", async () => {
+        do_not_optimize(await read(bytes, { rootName: true, endian: "big", compression: null }));
+      });
+      bench("prismarine-nbt", () => {
+        do_not_optimize(parseUncompressed(bytes, "big"));
+      });
+    });
+  });
+}
+
+const entities = fixture("entities");
+const truncated = entities.subarray(0, Math.floor(entities.length * 0.9));
+summary(() => {
+  group("entities, failure path", () => {
+    bench("decode", () => {
+      do_not_optimize(decode(entities));
+    });
+    bench("decode truncated at 90%", () => {
+      do_not_optimize(decode(truncated));
+    });
+  });
+});
+
+await run();

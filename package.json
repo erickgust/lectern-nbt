@@ -24,8 +24,8 @@
     "suppressions": "! grep -rnE 'oxlint-disable|eslint-disable|@ts-ignore|@ts-nocheck|@ts-expect-error' src",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "bench": "node bench/speed.bench.ts",
-    "bench:memory": "node --expose-gc bench/memory.mjs",
+    "bench": "node --import ./bench/resolve-ts.ts bench/speed.bench.ts",
+    "bench:memory": "node --expose-gc --import ./bench/resolve-ts.ts bench/memory.ts",
     "package:check": "bun run build && publint && attw --pack . --profile esm-only",
     "check": "bun run format:check && bun run lint && bun run suppressions && bun run typecheck && bun run test && bun run package:check"
   },
