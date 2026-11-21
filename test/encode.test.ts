@@ -114,6 +114,12 @@ it.each(["big", "little"] as const)(
   },
 );
 
+it("reports an unknown key next to a non-enumerable codec key", () => {
+  const value = { x: 5 };
+  Object.defineProperty(value, "a", { value: 1 });
+  expect(errorOf(compound({ a: byte }), value)).toEqual({ kind: "UnknownKey", path: ["x"] });
+});
+
 it("encodes a decoded document with a user codec", async () => {
   const Item = compound({ id: string, Count: byte });
   const Player = compound({ Health: float, Inventory: list(Item) });

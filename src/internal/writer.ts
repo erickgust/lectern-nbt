@@ -177,7 +177,6 @@ export function writeTree(
 
   function compound(codec: CompoundCodec, value: object): void {
     const { keys, codecs, optionals } = codec;
-    let present = 0;
     let i = 0;
     try {
       for (; i < keys.length; i++) {
@@ -187,7 +186,6 @@ export function writeTree(
           if (optionals[i] !== true) fail("MissingKey");
           continue;
         }
-        present++;
         const field = codecs[i]!;
         reserve(1);
         bytes[pos++] = field.tag;
@@ -198,9 +196,12 @@ export function writeTree(
       if (error instanceof WriteFailure) error.path.push(keys[i]!);
       throw error;
     }
-    if (present !== Object.keys(value).length) {
-      const unknown = Object.keys(value).find((key) => fieldIndex(indexes, codec, key) === -1);
-      if (unknown !== undefined) fail("UnknownKey", unknown);
+    const own = Object.keys(value);
+    for (let j = 0, next = 0; j < own.length; j++) {
+      const key = own[j]!;
+      const index = keys[next] === key ? next : fieldIndex(indexes, codec, key);
+      if (index === -1) fail("UnknownKey", key);
+      next = index + 1;
     }
     reserve(1);
     bytes[pos++] = 0;
