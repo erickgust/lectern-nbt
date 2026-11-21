@@ -10,15 +10,15 @@ This is not a drop-in replacement for NBTify.
 
 - [x] Java edition big-endian decode/encode
 - [x] Little-endian (Bedrock) decode/encode
-- [ ] gzip / zlib via DecompressionStream / CompressionStream
-- [ ] detect (compression + endianness)
-- [ ] read / write (whole files, compression and endianness kept)
-- [ ] Structure-only fast path (check)
-- [ ] Codec builders, Infer, validate, extend, strict, optional
-- [ ] Number/array constructors with range checks
+- [x] gzip / zlib via DecompressionStream / CompressionStream
+- [x] detect (compression + endianness)
+- [x] read / write (whole files, compression and endianness kept)
+- [x] Structure-only fast path (check)
+- [x] Codec builders, Infer, validate, extend, strict, optional
+- [x] Number/array constructors with range checks
 - [x] Codec inference
-- [ ] Paths on every error
-- [ ] print (codec → TypeScript source)
+- [x] Paths on every error
+- [x] print (codec → TypeScript source)
 
 ### v2
 
