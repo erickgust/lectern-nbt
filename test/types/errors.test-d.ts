@@ -2,6 +2,7 @@ import { expectTypeOf, test } from "vitest";
 import type {
   CompressionError,
   DecodeError,
+  DecompressError,
   DetectError,
   EncodeError,
   NbtError,
@@ -23,14 +24,17 @@ type Encode = Data | "OutOfRange" | "StringTooLong";
 
 test("each error alias holds exactly its kinds", () => {
   expectTypeOf<DecodeError["kind"]>().toEqualTypeOf<Decode>();
-  expectTypeOf<ReadError["kind"]>().toEqualTypeOf<Decode | "UnknownFormat" | "CompressionFailed">();
+  expectTypeOf<ReadError["kind"]>().toEqualTypeOf<
+    Decode | "UnknownFormat" | "CompressionFailed" | "TooLarge"
+  >();
   expectTypeOf<EncodeError["kind"]>().toEqualTypeOf<Encode>();
   expectTypeOf<WriteError["kind"]>().toEqualTypeOf<Encode | "CompressionFailed">();
   expectTypeOf<ValidateError["kind"]>().toEqualTypeOf<Encode>();
   expectTypeOf<DetectError["kind"]>().toEqualTypeOf<"UnknownFormat">();
   expectTypeOf<CompressionError["kind"]>().toEqualTypeOf<"CompressionFailed">();
+  expectTypeOf<DecompressError["kind"]>().toEqualTypeOf<"CompressionFailed" | "TooLarge">();
   expectTypeOf<NbtError["kind"]>().toEqualTypeOf<
-    Decode | Encode | "UnknownFormat" | "CompressionFailed"
+    Decode | Encode | "UnknownFormat" | "CompressionFailed" | "TooLarge"
   >();
 });
 

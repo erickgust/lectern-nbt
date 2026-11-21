@@ -9,6 +9,7 @@ import type { ReadError, Result, WriteError } from "./result.js";
 export interface ReadOptions {
   readonly compression?: Compression;
   readonly endian?: Endian;
+  readonly maxSize?: number;
 }
 
 export function read<C extends Codec>(
@@ -30,7 +31,7 @@ export async function read(
     compression = format.value.compression;
     if (compression === "none") endian ??= format.value.endian;
   }
-  const raw = await decompress(bytes, compression);
+  const raw = await decompress(bytes, compression, options);
   if (!raw.ok) return raw;
   const doc = decodeWith(raw.value, codec, endian ?? endianOf(raw.value) ?? "big");
   if (!doc.ok) return doc;

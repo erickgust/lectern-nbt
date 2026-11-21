@@ -1,6 +1,8 @@
 import { fc, test } from "@fast-check/vitest";
 import { write as nbtifyWrite } from "nbtify";
-import { deflateSync, gzipSync } from "node:zlib";
+import { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
+import { createGzip, deflateSync, gzipSync } from "node:zlib";
 import { expect, it } from "vitest";
 import {
   byte,
@@ -81,6 +83,31 @@ it.each([
   ["unknown bytes", new Uint8Array([0xff, 0, 0]), "UnknownFormat"],
 ])("reports %s", async (_name, bytes, kind) => {
   expect(await read(bytes)).toEqual({ ok: false, error: { kind, path: [] } });
+});
+
+const tooLarge = { ok: false, error: { kind: "TooLarge", path: [] } };
+
+const zeros = new Uint8Array(1 << 20);
+const gzippedZeros = async (mebibytes: number): Promise<Uint8Array> =>
+  new Uint8Array(
+    await buffer(Readable.from(Array.from({ length: mebibytes }, () => zeros)).pipe(createGzip())),
+  );
+
+it.each([
+  ["gzip", gzipSync(new Uint8Array(4096))],
+  ["zlib", deflateSync(new Uint8Array(4096))],
+] as const)("limits %s output to maxSize", async (compression, bytes) => {
+  const packed = new Uint8Array(bytes);
+  expect(await decompress(packed, compression, { maxSize: 4095 })).toEqual(tooLarge);
+  expect(ok(await decompress(packed, compression, { maxSize: 4096 }))).toHaveLength(4096);
+});
+
+it("rejects more than 256 MiB of output by default", async () => {
+  expect(await decompress(await gzippedZeros(257), "gzip")).toEqual(tooLarge);
+});
+
+it("passes maxSize through read", async () => {
+  expect(await read(new Uint8Array(gzipSync(entities)), { maxSize: 1000 })).toEqual(tooLarge);
 });
 
 test.prop([fc.uint8Array({ maxLength: 64 })])("never rejects", async (bytes) => {

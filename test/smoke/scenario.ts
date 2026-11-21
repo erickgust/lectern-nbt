@@ -2,7 +2,9 @@ import {
   byte,
   check,
   compound,
+  compress,
   decode,
+  decompress,
   detect,
   encode,
   float,
@@ -55,5 +57,9 @@ export async function scenario(): Promise<string[]> {
   const file = await read(packed.value, Player);
   expect("read gzip", file.ok && file.value.compression === "gzip");
   expect("read value", file.ok && file.value.root.Seen === root.Seen);
+  const bomb = await compress(new Uint8Array(1 << 20), "gzip");
+  if (!bomb.ok) return [...failures, `compress: ${bomb.error.kind}`];
+  const limited = await decompress(bomb.value, "gzip", { maxSize: 1000 });
+  expect("decompress maxSize", !limited.ok && limited.error.kind === "TooLarge");
   return failures;
 }

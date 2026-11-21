@@ -37,6 +37,7 @@ export type NbtError = Located &
     | { readonly kind: "StringTooLong" }
     | { readonly kind: "UnknownFormat" }
     | { readonly kind: "CompressionFailed" }
+    | { readonly kind: "TooLarge" }
   );
 
 type Kinds<K extends NbtError["kind"]> = Extract<NbtError, { readonly kind: K }>;
@@ -53,9 +54,10 @@ type DecodeKind =
 type EncodeKind = DataKind | "OutOfRange" | "StringTooLong";
 
 export type DecodeError = Kinds<DecodeKind>;
-export type ReadError = Kinds<DecodeKind | "UnknownFormat" | "CompressionFailed">;
+export type ReadError = Kinds<DecodeKind | "UnknownFormat" | "CompressionFailed" | "TooLarge">;
 export type EncodeError = Kinds<EncodeKind>;
 export type WriteError = Kinds<EncodeKind | "CompressionFailed">;
 export type ValidateError = Kinds<EncodeKind>;
 export type DetectError = Kinds<"UnknownFormat">;
 export type CompressionError = Kinds<"CompressionFailed">;
+export type DecompressError = Kinds<"CompressionFailed" | "TooLarge">;
