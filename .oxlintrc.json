@@ -52,7 +52,9 @@
         "typescript/prefer-for-of": "off",
         "eslint/no-bitwise": "off",
         "eslint/no-plusplus": "off",
-        "eslint/no-param-reassign": "off"
+        "eslint/no-param-reassign": "off",
+        "unicorn/prefer-code-point": "off",
+        "unicorn/no-new-array": "off"
       }
     },
     {
