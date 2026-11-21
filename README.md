@@ -110,7 +110,7 @@ Codec builders: `compound`, `list`, `optional`, `strict` (extra keys become an e
 - Round trips are byte-exact when the compounds in a list share key order and empty lists are End-typed, which is how Minecraft writes files. The data is always equal, but a list element whose keys were in another order comes back in the merged codec's order.
 - `print` can't keep the order of integer-like keys (`"0"`, `"12"`), because JavaScript orders them numerically in object literals.
 - `decompress` and `read` don't limit the decompressed size.
-- Bedrock `level.dat` files, which have an 8-byte header, aren't supported yet.
+- Bedrock `level.dat` files, which have an 8-byte header, and Bedrock network NBT, which uses varints, aren't supported yet.
 
 ## Benchmarks
 
