@@ -23,6 +23,7 @@ import { decoded, fixture, fixtures, int32, named, nbtify, root, utf } from "./n
 const Item = compound({ id: string, Count: byte, Slot: optional(byte) });
 const Player = compound({ Name: string, Health: float, Pos: list(double), Inventory: list(Item) });
 const Small = compound({ a: int, l: list(byte), s: optional(string) });
+const Abc = compound({ a: byte, b: byte, c: byte });
 
 function decodedWith<C extends Codec>(bytes: Uint8Array, codec: C): NbtDocument<C> {
   const result = decode(bytes, codec);
@@ -133,6 +134,18 @@ it.each([
       ),
     ),
     { kind: "TagMismatch", expected: "byte", found: "short", offset: 20, path: ["L", 0, "Count"] },
+  ],
+  [
+    "a repeated first key",
+    Abc,
+    root(...named(1, "a", 1), ...named(1, "a", 2)),
+    { kind: "DuplicateKey", offset: 8, path: ["a"] },
+  ],
+  [
+    "a repeated key that arrives in codec order",
+    Abc,
+    root(...named(1, "c", 1), ...named(1, "a", 1), ...named(1, "b", 1), ...named(1, "c", 2)),
+    { kind: "DuplicateKey", offset: 18, path: ["c"] },
   ],
   [
     "a missing key",
