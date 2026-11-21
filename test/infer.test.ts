@@ -4,8 +4,10 @@ import { decoded, fields, fixture, int32, itemOf, items, named, nbtify, root, ut
 
 const compound = (...entries: (readonly [string, object, boolean])[]): object => ({
   tag: 10,
+  keys: entries.map(([key]) => key),
+  codecs: entries.map(([, codec]) => codec),
+  optionals: entries.map(([, , optional]) => optional),
   strict: false,
-  fields: entries,
 });
 
 it("infers one shared codec for the entities fixture", () => {

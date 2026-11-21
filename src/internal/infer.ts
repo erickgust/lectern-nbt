@@ -1,4 +1,4 @@
-import type { Codec, CompoundCodec, Entry, ListCodec, MixedListCodec } from "../codec.js";
+import type { Codec, CompoundCodec, ListCodec, MixedListCodec } from "../codec.js";
 
 export const BYTE: Codec = Object.freeze({ tag: 1 });
 export const SHORT: Codec = Object.freeze({ tag: 2 });
@@ -75,12 +75,18 @@ function add(shape: Shape, key: string, codec: Codec, optional: boolean): Shape 
 
 function compoundOf(shape: Shape): CompoundCodec {
   if (shape.compound !== undefined) return shape.compound;
-  const fields: Entry[] = [];
+  let size = 0;
+  for (let s: Shape = shape; s.parent !== undefined; s = s.parent) size++;
+  const keys = new Array<string>(size);
+  const codecs = new Array<Codec>(size);
+  const optionals = new Array<boolean>(size);
   for (let s: Shape = shape; s.parent !== undefined; s = s.parent) {
-    fields.push([s.key, s.codec, s.optional]);
+    size--;
+    keys[size] = s.key;
+    codecs[size] = s.codec;
+    optionals[size] = s.optional;
   }
-  fields.reverse();
-  shape.compound = { tag: 10, fields, strict: false };
+  shape.compound = { tag: 10, keys, codecs, optionals, strict: false };
   return shape.compound;
 }
 
@@ -102,8 +108,10 @@ export function createInference(): Inference {
 
   const mergeCompounds = (compounds: readonly CompoundCodec[]): Codec | undefined => {
     const keys = new Map<string, { codecs: Codec[]; optional: boolean }>();
-    for (const compound of compounds) {
-      for (const [key, codec, optional] of compound.fields) {
+    for (const { keys: names, codecs, optionals } of compounds) {
+      for (const [i, key] of names.entries()) {
+        const codec = codecs[i]!;
+        const optional = optionals[i]!;
         const seen = keys.get(key);
         if (seen === undefined) {
           keys.set(key, { codecs: [codec], optional });

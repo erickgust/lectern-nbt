@@ -43,11 +43,11 @@ export interface MixedListCodec {
   readonly items: readonly Codec[];
 }
 
-export type Entry = readonly [key: string, codec: Codec, optional: boolean];
-
 export interface CompoundCodec<F extends Fields = Fields> {
   readonly tag: 10;
-  readonly fields: readonly Entry[];
+  readonly keys: readonly string[];
+  readonly codecs: readonly Codec[];
+  readonly optionals: readonly boolean[];
   readonly strict: boolean;
   readonly [shape]?: F;
 }
@@ -158,15 +158,30 @@ type Leaf = ((...args: never[]) => unknown) & {
   readonly tag: Exclude<Codec["tag"], 9 | 10>;
 };
 
-function plain<C extends Codec>(codec: C): Plain<C>;
-function plain(codec: Codec | Leaf): Codec {
+export function plain<C extends Codec>(codec: C): Plain<C>;
+export function plain(codec: Codec | Leaf): Codec {
   return typeof codec === "function" ? { tag: codec.tag } : codec;
 }
 
-function entries(fields: Fields): Entry[] {
-  return Object.entries(fields).map(([key, field]) =>
-    "optional" in field ? [key, plain(field.optional), true] : [key, plain(field), false],
-  );
+interface Columns {
+  keys: string[];
+  codecs: Codec[];
+  optionals: boolean[];
+}
+
+function column(field: Field): readonly [Codec, boolean] {
+  return "optional" in field ? [plain(field.optional), true] : [plain(field), false];
+}
+
+function columns(fields: Fields): Columns {
+  const result: Columns = { keys: [], codecs: [], optionals: [] };
+  for (const [key, field] of Object.entries(fields)) {
+    const [codec, isOptional] = column(field);
+    result.keys.push(key);
+    result.codecs.push(codec);
+    result.optionals.push(isOptional);
+  }
+  return result;
 }
 
 export function list<I extends Codec>(item: I): ListCodec<Plain<I>> {
@@ -178,7 +193,7 @@ export function optional<C extends Codec>(codec: C): Optional<Plain<C>> {
 }
 
 export function compound<F extends Fields>(fields: F): CompoundCodec<PlainFields<F>> {
-  return { tag: 10, fields: entries(fields), strict: false };
+  return { tag: 10, ...columns(fields), strict: false };
 }
 
 export function strict<F extends Fields>(codec: CompoundCodec<F>): CompoundCodec<F> {
@@ -189,9 +204,14 @@ export function extend<F extends Fields, G extends Fields>(
   codec: CompoundCodec<F>,
   fields: G,
 ): CompoundCodec<Simplify<Omit<F, keyof G> & PlainFields<G>>> {
-  const added = new Map(entries(fields).map((entry) => [entry[0], entry]));
-  const kept = codec.fields.map((entry) => added.get(entry[0]) ?? entry);
-  const known = new Set(codec.fields.map(([key]) => key));
-  const appended = [...added.values()].filter(([key]) => !known.has(key));
-  return { tag: 10, fields: [...kept, ...appended], strict: codec.strict };
+  const keys = [...codec.keys];
+  const codecs = [...codec.codecs];
+  const optionals = [...codec.optionals];
+  const index = new Map(keys.map((key, i) => [key, i]));
+  for (const [key, field] of Object.entries(fields)) {
+    const at = index.get(key) ?? keys.length;
+    keys[at] = key;
+    [codecs[at], optionals[at]] = column(field);
+  }
+  return { tag: 10, keys, codecs, optionals, strict: codec.strict };
 }

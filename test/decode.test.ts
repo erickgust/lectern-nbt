@@ -48,7 +48,12 @@ it("copies arrays out of a Node Buffer view without touching it", async () => {
 it("returns the root name and defaults to big-endian", () => {
   expect(decode(new Uint8Array([10, ...utf("hi"), 0]))).toEqual({
     ok: true,
-    value: { name: "hi", root: {}, codec: { tag: 10, fields: [], strict: false }, endian: "big" },
+    value: {
+      name: "hi",
+      root: {},
+      codec: { tag: 10, keys: [], codecs: [], optionals: [], strict: false },
+      endian: "big",
+    },
   });
 });
 

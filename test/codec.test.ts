@@ -35,11 +35,9 @@ describe("codecs", () => {
   test("keep fields in order with leaves stored as tags", () => {
     expect(Item).toEqual({
       tag: 10,
-      fields: [
-        ["id", { tag: 8 }, false],
-        ["Count", { tag: 1 }, false],
-        ["Slot", { tag: 1 }, true],
-      ],
+      keys: ["id", "Count", "Slot"],
+      codecs: [{ tag: 8 }, { tag: 1 }, { tag: 1 }],
+      optionals: [false, false, true],
       strict: false,
     });
     expect(list(int)).toEqual({ tag: 9, item: { tag: 3 } });
@@ -48,18 +46,15 @@ describe("codecs", () => {
   test("strict marks only the compound it wraps", () => {
     const codec = strict(compound({ Item }));
     expect(codec.strict).toBe(true);
-    expect(codec.fields[0]?.[1]).toBe(Item);
+    expect(codec.codecs[0]).toBe(Item);
   });
 
   test("extend replaces fields in place and appends new ones", () => {
     const extended = extend(strict(Item), { Count: int, Glowing: byte });
-    expect(extended.fields.map(([key, codec]) => [key, codec.tag])).toEqual([
-      ["id", 8],
-      ["Count", 3],
-      ["Slot", 1],
-      ["Glowing", 1],
-    ]);
+    expect(extended.keys).toEqual(["id", "Count", "Slot", "Glowing"]);
+    expect(extended.codecs.map((codec) => codec.tag)).toEqual([8, 3, 1, 1]);
+    expect(extended.optionals).toEqual([false, false, true, false]);
     expect(extended.strict).toBe(true);
-    expect(Item.fields).toHaveLength(3);
+    expect(Item.keys).toHaveLength(3);
   });
 });

@@ -1,12 +1,6 @@
 import { readFileSync } from "node:fs";
 import { write, type RootTagLike } from "nbtify";
-import {
-  decode,
-  type Codec,
-  type DecodeError,
-  type Entry,
-  type NbtDocument,
-} from "../src/index.js";
+import { decode, type Codec, type DecodeError, type NbtDocument } from "../src/index.js";
 
 export const fixtures: readonly string[] = ["entities", "chunks", "strings"];
 
@@ -27,8 +21,12 @@ export function errorOf(bytes: readonly number[] | Uint8Array): DecodeError | un
   return result.ok ? undefined : result.error;
 }
 
+type Entry = readonly [key: string, codec: Codec, optional: boolean];
+
 export const fields = (codec: Codec | undefined): readonly Entry[] =>
-  codec?.tag === 10 ? codec.fields : [];
+  codec?.tag === 10
+    ? codec.codecs.map((item, i): Entry => [codec.keys[i] ?? "", item, codec.optionals[i] === true])
+    : [];
 
 export const items = (codec: Codec | undefined): readonly Codec[] =>
   codec !== undefined && "items" in codec ? codec.items : [];
