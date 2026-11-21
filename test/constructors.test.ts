@@ -32,6 +32,14 @@ describe("number constructors", () => {
     expect(() => float(1e40)).toThrow(RangeError);
   });
 
+  it("build lists with .of on every leaf", () => {
+    expect(long.of(1n, -(2n ** 63n))).toEqual([1n, -(2n ** 63n)]);
+    expect(float.of(0.1, 20)).toEqual([Math.fround(0.1), 20]);
+    expect(double.of(0, 70, 0)).toEqual([0, 70, 0]);
+    expect(() => long.of(2n ** 63n)).toThrow(RangeError);
+    expect(() => float.of(1e40)).toThrow(RangeError);
+  });
+
   it("accept the edges of each range", () => {
     expect(byte.of(-128, 127)).toEqual([-128, 127]);
     expect(long(2n ** 63n - 1n)).toBe(2n ** 63n - 1n);

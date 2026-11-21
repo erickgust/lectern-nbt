@@ -65,7 +65,8 @@ it("keeps a __proto__ key as an own property", () => {
 
 it.each(fixtures)("never throws on truncations of the %s fixture", (name) => {
   const bytes = fixture(name);
-  for (let end = 0; end < bytes.length; end += 997) {
+  for (let i = 0; i < 64; i++) {
+    const end = Math.floor((bytes.length * i) / 64);
     expect(decode(bytes.subarray(0, end))).toMatchObject({ ok: false });
   }
 });
