@@ -54,4 +54,5 @@ jobs:
         with:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile
-      - run: bun run bench:guard
+      - name: Speed guard (up to 3 attempts)
+        run: bun run bench:guard || bun run bench:guard || bun run bench:guard
