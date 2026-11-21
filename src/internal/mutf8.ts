@@ -83,3 +83,46 @@ export function decodeString(bytes: Uint8Array, start: number, end: number): str
     return undefined;
   }
 }
+
+function continues(bytes: Uint8Array, at: number, count: number, end: number): boolean {
+  if (at + count > end) return false;
+  for (let i = at; i < at + count; i++) {
+    if ((bytes[i]! & 0xc0) !== 0x80) return false;
+  }
+  return true;
+}
+
+function isUtf8(bytes: Uint8Array, start: number, end: number): boolean {
+  let i = start;
+  while (i < end) {
+    const a = bytes[i]!;
+    if (a < 0x80) {
+      i += 1;
+      continue;
+    }
+    const b = bytes[i + 1] ?? 0;
+    let size: number;
+    if (a >= 0xc2 && a <= 0xdf) size = 2;
+    else if (a === 0xe0) size = b >= 0xa0 ? 3 : 0;
+    else if (a === 0xed) size = b <= 0x9f ? 3 : 0;
+    else if (a >= 0xe1 && a <= 0xef) size = 3;
+    else if (a === 0xf0) size = b >= 0x90 ? 4 : 0;
+    else if (a === 0xf4) size = b <= 0x8f ? 4 : 0;
+    else if (a >= 0xf1 && a <= 0xf3) size = 4;
+    else size = 0;
+    if (size === 0 || !continues(bytes, i + 1, size - 1, end)) return false;
+    i += size;
+  }
+  return true;
+}
+
+export function isValidString(bytes: Uint8Array, start: number, end: number): boolean {
+  let i = start;
+  while (i < end && bytes[i]! < 0x80) i++;
+  if (i === end) return true;
+  for (let j = i; j < end; j++) {
+    const b = bytes[j]!;
+    if (b === 0xc0 || b === 0xed) return codeUnits(bytes, start, end) !== undefined;
+  }
+  return isUtf8(bytes, i, end);
+}
