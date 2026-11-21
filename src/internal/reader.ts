@@ -237,7 +237,7 @@ export function readTree(bytes: Uint8Array, little: boolean, expected?: Codec): 
     const end = pos++;
     if (
       seen < keys.length &&
-      missingKey(compoundCodec, (key) => Object.hasOwn(result, key)) !== -1
+      missingKey(compoundCodec, (i) => Object.hasOwn(result, keys[i]!)) !== -1
     ) {
       fail("MissingKey", end);
     }

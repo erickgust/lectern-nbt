@@ -80,8 +80,8 @@ export function fieldIndex(indexes: Indexes, codec: CompoundCodec, key: string):
   return index.get(key) ?? -1;
 }
 
-export function missingKey(codec: CompoundCodec, has: (key: string) => boolean): number {
-  return codec.keys.findIndex((key, i) => codec.optionals[i] !== true && !has(key));
+export function missingKey(codec: CompoundCodec, has: (index: number) => boolean): number {
+  return codec.optionals.findIndex((optional, i) => !optional && !has(i));
 }
 
 export function stringAt(bytes: Uint8Array, view: DataView, pos: number, little: boolean): number {
