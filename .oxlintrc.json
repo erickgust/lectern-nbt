@@ -59,6 +59,13 @@
       }
     },
     {
+      "files": ["test/print.test.ts"],
+      "rules": {
+        "typescript/no-implied-eval": "off",
+        "typescript/no-unsafe-call": "off"
+      }
+    },
+    {
       "files": ["src/internal/reader.ts"],
       "rules": {
         "eslint/max-lines": "off"
