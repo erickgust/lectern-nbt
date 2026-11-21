@@ -1,6 +1,7 @@
-import { plain, type Codec, type Endian, type NbtDocument } from "./codec.js";
-import { locate } from "./internal/path.js";
+import type { Codec, Endian, NbtDocument } from "./codec.js";
 import { ReadFailure, toError } from "./internal/checks.js";
+import { codecOrOptions } from "./internal/overload.js";
+import { locate } from "./internal/path.js";
 import { readTree } from "./internal/reader.js";
 import type { DecodeError, Result } from "./result.js";
 
@@ -19,11 +20,18 @@ export function decode(
 ): Result<NbtDocument, DecodeError>;
 export function decode(
   bytes: Uint8Array,
-  codecOrOptions: Codec | DecodeOptions = {},
-  options: DecodeOptions = {},
+  first?: Codec | DecodeOptions,
+  second?: DecodeOptions,
 ): Result<NbtDocument, DecodeError> {
-  const expected = "tag" in codecOrOptions ? plain(codecOrOptions) : undefined;
-  const endian = ("tag" in codecOrOptions ? options : codecOrOptions).endian ?? "big";
+  const { codec: expected, options } = codecOrOptions(first, second);
+  return decodeWith(bytes, expected, options.endian ?? "big");
+}
+
+export function decodeWith(
+  bytes: Uint8Array,
+  expected: Codec | undefined,
+  endian: Endian,
+): Result<NbtDocument, DecodeError> {
   const little = endian === "little";
   try {
     const { name, root, codec } = readTree(bytes, little, expected);
