@@ -142,9 +142,9 @@ Retained memory after decoding, as a multiple of the file size, codec included:
 | -------- | ----------- | ---------- | ------------------ |
 | entities | 3.1×        | 6.2×       | 7.1×               |
 | chunks   | 1.1×        | 1.1×       | 8.5×               |
-| strings  | 4.1–6.9×    | 3.3×       | 4.6×               |
+| strings  | 4.2×        | 3.3×       | 4.6×               |
 
-The strings fixture is one compound with 5,000 keys, and most of its memory is the inferred codec, which holds every key. Its result changes between runs of the same code, which is why it's a range. Decoding it with a codec avoids building one.
+The strings fixture is one compound with 5,000 keys. lectern-nbt's extra memory there is the inferred codec, whose three arrays hold an entry per key. Decoding it with a codec avoids building one.
 
 ## Support
 
