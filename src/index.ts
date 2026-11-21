@@ -3,9 +3,11 @@ export type * from "./codec.js";
 export type { Byte, Double, Float, Int, Long, Short } from "./internal/brand.js";
 export { compound, extend, list, optional, strict } from "./codec.js";
 export { check } from "./check.js";
+export { compress, decompress } from "./compression.js";
 export { decode, type DecodeOptions } from "./decode.js";
 export { detect, type Format } from "./detect.js";
 export { encode } from "./encode.js";
+export { read, write, type ReadOptions } from "./file.js";
 export {
   byte,
   byteArray,

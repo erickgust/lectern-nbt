@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { write, type RootTagLike } from "nbtify";
-import { decode, type Codec, type DecodeError, type NbtDocument } from "../src/index.js";
+import {
+  decode,
+  type Codec,
+  type DecodeError,
+  type NbtDocument,
+  type Result,
+} from "../src/index.js";
 
 export const fixtures: readonly string[] = ["entities", "chunks", "strings"];
 
@@ -19,6 +25,11 @@ export function decoded(bytes: Uint8Array, endian: "big" | "little" = "big"): Nb
 export function decodedWith<C extends Codec>(bytes: Uint8Array, codec: C): NbtDocument<C> {
   const result = decode(bytes, codec);
   if (!result.ok) throw new Error(`${result.error.kind} at ${result.error.path.join(".")}`);
+  return result.value;
+}
+
+export function ok<T>(result: Result<T, { readonly kind: string }>): T {
+  if (!result.ok) throw new Error(result.error.kind);
   return result.value;
 }
 
