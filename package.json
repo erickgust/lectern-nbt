@@ -1,6 +1,6 @@
 {
   "name": "lectern-nbt",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Minecraft NBT for TypeScript: codecs as plain data, plain JS values, errors as results",
   "keywords": [
     "bedrock",
