@@ -25,6 +25,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "bench": "node --import ./bench/resolve-ts.ts bench/speed.bench.ts",
+    "bench:guard": "node --import ./bench/resolve-ts.ts bench/guard.ts",
     "bench:memory": "node --expose-gc --import ./bench/resolve-ts.ts bench/memory.ts",
     "package:check": "bun run build && publint && attw --pack . --profile esm-only",
     "consumer:check": "bun run build && node node_modules/typescript6/bin/tsc -p test/consumer && node test/consumer/index.ts",
