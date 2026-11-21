@@ -4,12 +4,15 @@ import { Float32, Int16, Int32, Int8, type RootTagLike, type Tag } from "nbtify"
 import { expect, it } from "vitest";
 import {
   byte,
+  byteArray,
   compound,
   encode,
   float,
   int,
+  intArray,
   list,
   long,
+  longArray,
   optional,
   string,
   type Codec,
@@ -90,6 +93,26 @@ it("writes typed array views at their own offset", () => {
   const doc = decoded(encoded(document(codec, value)));
   expect(firstDifference(doc.root, value)).toBeUndefined();
 });
+
+const detached = <T extends ArrayBufferView>(array: T): T => {
+  structuredClone(array.buffer, { transfer: [array.buffer] });
+  return array;
+};
+
+it.each(["big", "little"] as const)(
+  "writes detached typed arrays as empty (%s-endian)",
+  (endian) => {
+    const codec = compound({ a: byteArray, b: intArray, c: longArray });
+    const value = {
+      a: detached(new Int8Array(4)),
+      b: detached(new Int32Array(4)),
+      c: detached(new BigInt64Array(4)),
+    };
+    const doc = decoded(encoded({ ...document(codec, value), endian }), endian);
+    const empty = { a: new Int8Array(0), b: new Int32Array(0), c: new BigInt64Array(0) };
+    expect(firstDifference(doc.root, empty)).toBeUndefined();
+  },
+);
 
 it("encodes a decoded document with a user codec", async () => {
   const Item = compound({ id: string, Count: byte });

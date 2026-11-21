@@ -119,7 +119,9 @@ export function writeTree(
     reserve(4 + source.byteLength);
     view.setInt32(pos, count, little);
     pos += 4;
-    if (!swap) {
+    if (source.length === 0) {
+      return;
+    } else if (!swap) {
       bytes.set(new Uint8Array(source.buffer, source.byteOffset, source.byteLength), pos);
     } else if (pairs) {
       for (let i = 0; i < source.length; i += 2) {
@@ -251,7 +253,9 @@ export function writeTree(
         if (!(value instanceof Int8Array)) mismatch(7, value);
         reserve(4 + value.length);
         view.setInt32(pos, value.length, little);
-        bytes.set(new Uint8Array(value.buffer, value.byteOffset, value.length), pos + 4);
+        if (value.length > 0) {
+          bytes.set(new Uint8Array(value.buffer, value.byteOffset, value.length), pos + 4);
+        }
         pos += 4 + value.length;
         return;
       case 8:
@@ -263,7 +267,12 @@ export function writeTree(
         return;
       case 12:
         if (!(value instanceof BigInt64Array)) mismatch(12, value);
-        words(new Int32Array(value.buffer, value.byteOffset, value.length * 2), true);
+        words(
+          value.length === 0
+            ? new Int32Array(0)
+            : new Int32Array(value.buffer, value.byteOffset, value.length * 2),
+          true,
+        );
         return;
       case 9:
         if (!Array.isArray(value)) mismatch(9, value);
