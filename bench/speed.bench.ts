@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { bench, do_not_optimize, group, run, summary } from "mitata";
 import { read, write } from "nbtify";
 import { parseUncompressed, writeUncompressed } from "prismarine-nbt";
-import { decode, encode } from "../src/index.js";
+import { check, decode, encode } from "../src/index.js";
 
 const fixture = (name: string): Buffer =>
   readFileSync(new URL(`fixtures/${name}.nbt`, import.meta.url));
@@ -47,6 +47,26 @@ for (const name of ["entities", "chunks", "strings"]) {
       });
       bench("prismarine-nbt", () => {
         do_not_optimize(writeUncompressed(prismarine, "big"));
+      });
+    });
+  });
+}
+
+for (const name of ["entities", "chunks", "strings"]) {
+  const bytes = fixture(name);
+  const inferred = decode(bytes);
+  if (!inferred.ok) throw new Error(inferred.error.kind);
+  const { codec } = inferred.value;
+  summary(() => {
+    group(`check ${name}`, () => {
+      bench("check", () => {
+        do_not_optimize(check(bytes));
+      });
+      bench("check with its codec", () => {
+        do_not_optimize(check(bytes, codec));
+      });
+      bench("decode", () => {
+        do_not_optimize(decode(bytes));
       });
     });
   });
