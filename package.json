@@ -27,6 +27,8 @@
     "bench": "node --import ./bench/resolve-ts.ts bench/speed.bench.ts",
     "bench:memory": "node --expose-gc --import ./bench/resolve-ts.ts bench/memory.ts",
     "package:check": "bun run build && publint && attw --pack . --profile esm-only",
+    "smoke:bun": "bun test/smoke/run.ts",
+    "smoke:deno": "deno run --sloppy-imports test/smoke/run.ts",
     "check": "bun run format:check && bun run lint && bun run suppressions && bun run typecheck && bun run test && bun run package:check"
   },
   "devDependencies": {
