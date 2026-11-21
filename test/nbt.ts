@@ -33,6 +33,9 @@ export const fields = (codec: Codec | undefined): readonly Entry[] =>
 export const items = (codec: Codec | undefined): readonly Codec[] =>
   codec !== undefined && "items" in codec ? codec.items : [];
 
+export const itemOf = (codec: Codec | undefined): Codec | undefined =>
+  codec !== undefined && "item" in codec ? codec.item : undefined;
+
 export const utf = (text: string): number[] => [0, text.length, ...new TextEncoder().encode(text)];
 export const named = (tag: number, name: string, ...payload: number[]): number[] => [
   tag,

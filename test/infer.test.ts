@@ -1,6 +1,6 @@
 import { Int8 } from "nbtify";
 import { expect, it } from "vitest";
-import { decoded, fields, fixture, int32, items, named, nbtify, root, utf } from "./nbt.js";
+import { decoded, fields, fixture, int32, itemOf, items, named, nbtify, root, utf } from "./nbt.js";
 
 const compound = (...entries: (readonly [string, object, boolean])[]): object => ({
   tag: 10,
@@ -106,4 +106,23 @@ it("shares identical compound shapes within one decode", async () => {
   const doc = decoded(await nbtify({ a: { x: new Int8(1) }, b: { x: new Int8(2) } }));
   const [a, b] = fields(doc.codec);
   expect(a?.[1]).toBe(b?.[1]);
+});
+
+const wide = (count: number, wrap: (entry: number[]) => number[]): Uint8Array => {
+  const head = [10, 0, 0, ...named(9, "L", 10, ...int32(count))];
+  const elements = Array.from({ length: count }, (_, i) => [...wrap(named(1, `k${i}`, 1)), 0]);
+  return new Uint8Array([head, ...elements, [0]].flat());
+};
+
+const nested = (entry: number[]): number[] => named(10, "tag", ...entry, 0);
+
+it("merges many list compounds with unique keys in linear time", () => {
+  const merged = fields(itemOf(fields(decoded(wide(20_000, (entry) => entry)).codec)[0]?.[1]));
+  expect(merged).toHaveLength(20_000);
+  expect(merged.every(([, , optional]) => optional)).toBe(true);
+});
+
+it("merges unique keys nested one compound deep in linear time", () => {
+  const merged = fields(itemOf(fields(decoded(wide(20_000, nested)).codec)[0]?.[1]));
+  expect(fields(merged[0]?.[1])).toHaveLength(20_000);
 });

@@ -100,43 +100,47 @@ export function createInference(): Inference {
   const child = (shape: Shape, key: string, codec: Codec, optional: boolean): Shape =>
     find(shape, key, codec, optional) ?? add(shape, key, codec, optional);
 
-  const mergeCompounds = (a: CompoundCodec, b: CompoundCodec): Codec | undefined => {
-    const other = new Map(b.fields.map((entry) => [entry[0], entry]));
-    let shape = root;
-    for (const [key, codec, optional] of a.fields) {
-      const entry = other.get(key);
-      if (entry === undefined) {
-        shape = child(shape, key, codec, true);
-      } else {
-        const merged = merge(codec, entry[1]);
-        if (merged === undefined) return undefined;
-        shape = child(shape, key, merged, optional || entry[2]);
-        other.delete(key);
+  const mergeCompounds = (compounds: readonly CompoundCodec[]): Codec | undefined => {
+    const keys = new Map<string, { codecs: Codec[]; optional: boolean }>();
+    for (const compound of compounds) {
+      for (const [key, codec, optional] of compound.fields) {
+        const seen = keys.get(key);
+        if (seen === undefined) {
+          keys.set(key, { codecs: [codec], optional });
+        } else {
+          seen.codecs.push(codec);
+          seen.optional ||= optional;
+        }
       }
     }
-    for (const [key, codec] of other.values()) shape = child(shape, key, codec, true);
+    let shape = root;
+    for (const [key, { codecs, optional }] of keys) {
+      const codec = mergeAll(codecs);
+      if (codec === undefined) return undefined;
+      shape = child(shape, key, codec, optional || codecs.length < compounds.length);
+    }
     return compoundOf(shape);
   };
 
-  const merge = (a: Codec, b: Codec): Codec | undefined => {
-    if (a === b) return a;
-    if (a === EMPTY_LIST && b.tag === 9) return b;
-    if (b === EMPTY_LIST && a.tag === 9) return a;
-    if (a.tag === 9 && b.tag === 9 && "item" in a && "item" in b) {
-      const item = merge(a.item, b.item);
+  const mergeAll = (codecs: readonly Codec[]): Codec | undefined => {
+    let distinct = [...new Set(codecs)];
+    if (distinct.every((codec) => codec.tag === 9)) {
+      const filled = distinct.filter((codec) => codec !== EMPTY_LIST);
+      if (filled.length > 0) distinct = filled;
+    }
+    if (distinct.length <= 1) return distinct[0];
+    const listCodecs = distinct.filter((codec): codec is ListCodec => "item" in codec);
+    if (listCodecs.length === distinct.length) {
+      const item = mergeAll(listCodecs.map((list) => list.item));
       return item === undefined ? undefined : listOf(item);
     }
-    if (a.tag === 10 && b.tag === 10) return mergeCompounds(a, b);
-    return undefined;
+    const compounds = distinct.filter((codec): codec is CompoundCodec => codec.tag === 10);
+    return compounds.length === distinct.length ? mergeCompounds(compounds) : undefined;
   };
 
   const listOfEach = (codecs: readonly Codec[]): Codec => {
-    let merged: Codec | undefined;
-    for (const codec of new Set(codecs)) {
-      merged = merged === undefined ? codec : merge(merged, codec);
-      if (merged === undefined) return { tag: 9, items: codecs };
-    }
-    return merged === undefined || merged === EMPTY_LIST ? EMPTY_LIST : listOf(merged);
+    const merged = mergeAll(codecs);
+    return merged === undefined ? { tag: 9, items: codecs } : listOf(merged);
   };
 
   return { root, find, add, compoundOf, listOf, listOfEach };
