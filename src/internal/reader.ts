@@ -52,6 +52,12 @@ function swap32(x: number): number {
   return ((x & 0xff) << 24) | ((x & 0xff00) << 8) | ((x >>> 8) & 0xff00) | (x >>> 24);
 }
 
+function copy(bytes: Uint8Array, start: number, end: number): ArrayBuffer {
+  const result = new Uint8Array(end - start);
+  result.set(bytes.subarray(start, end));
+  return result.buffer;
+}
+
 export function fail(kind: ReadKind, offset: number): never {
   throw new ReadFailure(kind, offset);
 }
@@ -125,7 +131,7 @@ export function readTree(bytes: Uint8Array, little: boolean): Tree {
 
   function words(count: number, pairs: boolean): Int32Array<ArrayBuffer> {
     const end = pos + count * 4;
-    const result = new Int32Array(bytes.slice(pos, end).buffer);
+    const result = new Int32Array(copy(bytes, pos, end));
     if (swap && pairs) {
       for (let i = 0; i < result.length; i += 2) {
         const high = result[i]!;
@@ -246,7 +252,7 @@ export function readTree(bytes: Uint8Array, little: boolean): Tree {
         codec = BYTE_ARRAY;
         const length = arrayLength(view, pos, 1, little);
         pos += 4;
-        const value = new Int8Array(bytes.slice(pos, pos + length).buffer);
+        const value = new Int8Array(copy(bytes, pos, pos + length));
         pos += length;
         return value;
       }

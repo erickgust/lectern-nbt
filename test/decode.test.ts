@@ -32,6 +32,19 @@ it("reads little-endian data", async () => {
   expect(doc.endian).toBe("little");
 });
 
+it("copies arrays out of a Node Buffer view without touching it", async () => {
+  const value = {
+    a: new Int8Array([1, -2]),
+    b: new Int32Array([3, -4]),
+    c: new BigInt64Array([5n]),
+  };
+  const padded = Buffer.concat([Buffer.from([7, 7, 7]), await nbtify(value)]);
+  const view = padded.subarray(3);
+  const before = Buffer.from(view);
+  expect(firstDifference(decoded(view).root, value)).toBeUndefined();
+  expect(view.equals(before)).toBe(true);
+});
+
 it("returns the root name and defaults to big-endian", () => {
   expect(decode(new Uint8Array([10, ...utf("hi"), 0]))).toEqual({
     ok: true,
