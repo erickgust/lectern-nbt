@@ -27,6 +27,7 @@ import {
   type Int,
   type Long,
   type NbtDocument,
+  type NbtFile,
   type NbtValue,
   type Result,
   type Short,
@@ -152,4 +153,8 @@ test("decode takes its document type from the codec", () => {
   >();
   // @ts-expect-error
   decode(bytes, { endain: "little" });
+});
+
+test("a file's storageVersion is an optional Int", () => {
+  expectTypeOf<NbtFile["storageVersion"]>().toEqualTypeOf<Int | undefined>();
 });

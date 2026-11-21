@@ -14,6 +14,7 @@ import {
   string,
   write,
   type Compression,
+  type Int,
   type NbtFile,
 } from "../src/index.js";
 import { firstDifference, fixture, ok } from "./nbt.js";
@@ -108,6 +109,21 @@ it("rejects more than 256 MiB of output by default", async () => {
 
 it("passes maxSize through read", async () => {
   expect(await read(new Uint8Array(gzipSync(entities)), { maxSize: 1000 })).toEqual(tooLarge);
+});
+
+const unbranded = (_value: number): _value is Int => true;
+
+function uncheckedInt(value: number): Int {
+  if (!unbranded(value)) throw new Error("unreachable");
+  return value;
+}
+
+it("rejects a storageVersion outside the int range", async () => {
+  const file = ok(await read(new Uint8Array([10, 0, 0, 0])));
+  expect(await write({ ...file, storageVersion: uncheckedInt(2 ** 31) })).toEqual({
+    ok: false,
+    error: { kind: "OutOfRange", expected: "int", value: 2 ** 31, path: [] },
+  });
 });
 
 test.prop([fc.uint8Array({ maxLength: 64 })])("never rejects", async (bytes) => {

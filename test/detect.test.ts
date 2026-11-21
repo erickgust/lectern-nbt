@@ -28,7 +28,7 @@ it.each([
   ["empty input", []],
   ["an End root", [0, 0, 0]],
   ["a name longer than the input", [10, 0, 9, 0x61]],
-  ["a Bedrock level.dat header", [10, 0, 0, 0, 5, 0, 0, 0, 10, 0, 0]],
+  ["a header whose length doesn't match the input", [10, 0, 0, 0, 5, 0, 0, 0, 10, 0, 0]],
 ])("rejects %s", (_name, bytes) => {
   expect(detect(new Uint8Array(bytes))).toEqual({
     ok: false,
@@ -39,6 +39,13 @@ it.each([
 it("recognises little-endian files written by NBTify", async () => {
   const bytes = await nbtify({ format_version: 1 }, "little");
   expect(detect(bytes)).toEqual({ ok: true, value: { compression: "none", endian: "little" } });
+});
+
+it.each([9, 10])("recognises a Bedrock level.dat header with storage version %i", (version) => {
+  expect(detect(new Uint8Array([version, 0, 0, 0, 4, 0, 0, 0, 10, 0, 0, 0]))).toEqual({
+    ok: true,
+    value: { compression: "none", endian: "little", storageVersion: version },
+  });
 });
 
 test.prop([fc.uint8Array({ maxLength: 32 })])("never throws", (bytes) => {

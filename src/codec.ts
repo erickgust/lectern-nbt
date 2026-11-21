@@ -152,6 +152,7 @@ export interface NbtDocument<C extends Codec = Codec> {
 
 export interface NbtFile<C extends Codec = Codec> extends NbtDocument<C> {
   readonly compression: Compression;
+  readonly storageVersion?: Int;
 }
 
 type Leaf = ((...args: never[]) => unknown) & {

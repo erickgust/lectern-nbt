@@ -1,10 +1,12 @@
 import type { Compression, Endian } from "./codec.js";
+import { toBrand, type Int } from "./internal/brand.js";
 import { isValidString } from "./internal/mutf8.js";
 import type { DetectError, Result } from "./result.js";
 
 export interface Format {
   readonly compression: Compression;
   readonly endian: Endian;
+  readonly storageVersion?: Int;
 }
 
 function u16(bytes: Uint8Array, at: number, little: boolean): number {
@@ -31,6 +33,13 @@ function plausible(bytes: Uint8Array, little: boolean): boolean {
   return plausibleString(bytes, end + 1, little) !== undefined;
 }
 
+export function headerOf(bytes: Uint8Array): Int | undefined {
+  if (bytes.length < 8) return undefined;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(4, true) !== bytes.length - 8) return undefined;
+  return plausible(bytes.subarray(8), true) ? toBrand<Int>(view.getInt32(0, true)) : undefined;
+}
+
 export function endianOf(bytes: Uint8Array): Endian | undefined {
   if (plausible(bytes, false)) return "big";
   return plausible(bytes, true) ? "little" : undefined;
@@ -43,6 +52,10 @@ export function detect(bytes: Uint8Array): Result<Format, DetectError> {
   const flags = bytes[1];
   if (bytes[0] === 0x78 && flags !== undefined && (0x7800 + flags) % 31 === 0) {
     return { ok: true, value: { compression: "zlib", endian: "big" } };
+  }
+  const storageVersion = headerOf(bytes);
+  if (storageVersion !== undefined) {
+    return { ok: true, value: { compression: "none", endian: "little", storageVersion } };
   }
   const endian = endianOf(bytes);
   if (endian === undefined) return { ok: false, error: { kind: "UnknownFormat", path: [] } };

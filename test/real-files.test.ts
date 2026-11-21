@@ -75,3 +75,36 @@ it("rejects Bedrock varint NBT as an unknown format", async () => {
     error: { kind: "UnknownFormat", path: [] },
   });
 });
+
+const withHeader = (version: number, body: Uint8Array): Uint8Array => {
+  const bytes = new Uint8Array(body.length + 8);
+  const view = new DataView(bytes.buffer);
+  view.setInt32(0, version, true);
+  view.setUint32(4, body.length, true);
+  bytes.set(body, 8);
+  return bytes;
+};
+
+const headered = withHeader(10, real("level.dat"));
+
+it("reads a Bedrock level.dat header like NBTify", async () => {
+  const file = ok(await read(headered));
+  expect(file).toMatchObject({ endian: "little", compression: "none", storageVersion: 10 });
+  const theirs = await nbtifyRead(headered);
+  expect(theirs.bedrockLevel).toBe(true);
+  expect(firstDifference(file.root, unwrap(theirs.data))).toBeUndefined();
+});
+
+it("writes a Bedrock level.dat header back byte for byte", async () => {
+  const written = ok(await write(ok(await read(headered))));
+  expect(Buffer.from(written).equals(Buffer.from(headered))).toBe(true);
+});
+
+it("reads the header when uncompressed little-endian is forced", async () => {
+  const file = ok(await read(headered, { compression: "none", endian: "little" }));
+  expect(file.storageVersion).toBe(10);
+});
+
+it("doesn't look for a header when big-endian is forced", async () => {
+  expect((await read(headered, { endian: "big" })).ok).toBe(false);
+});
