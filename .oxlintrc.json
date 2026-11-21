@@ -59,6 +59,12 @@
       }
     },
     {
+      "files": ["src/internal/reader.ts"],
+      "rules": {
+        "eslint/max-lines": "off"
+      }
+    },
+    {
       "files": ["src/internal/brand.ts"],
       "rules": {
         "typescript/consistent-type-assertions": "off",

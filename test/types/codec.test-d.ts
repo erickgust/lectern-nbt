@@ -3,6 +3,7 @@ import {
   byte,
   byteArray,
   compound,
+  decode,
   double,
   extend,
   float,
@@ -17,6 +18,7 @@ import {
   string,
   type Byte,
   type Codec,
+  type DecodeError,
   type Double,
   type Float,
   type Infer,
@@ -24,6 +26,7 @@ import {
   type Long,
   type NbtDocument,
   type NbtValue,
+  type Result,
   type Short,
 } from "../../src/index.js";
 
@@ -138,4 +141,16 @@ test("list and optional reject misuse", () => {
   list(optional(byte));
   expectTypeOf(list(byte)).not.toHaveProperty("of");
   expectTypeOf(list(byte).item).toEqualTypeOf<{ readonly tag: 1 }>();
+});
+
+test("decode takes its document type from the codec", () => {
+  const bytes = new Uint8Array();
+  expectTypeOf(decode(bytes, Player)).toEqualTypeOf<
+    Result<NbtDocument<typeof Player>, DecodeError>
+  >();
+  expectTypeOf(decode(bytes, { endian: "little" })).toEqualTypeOf<
+    Result<NbtDocument, DecodeError>
+  >();
+  // @ts-expect-error
+  decode(bytes, { endain: "little" });
 });

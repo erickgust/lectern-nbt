@@ -1,9 +1,9 @@
 import { fc, test } from "@fast-check/vitest";
 import { Float32, Int16, Int8 } from "nbtify";
 import { expect } from "vitest";
-import { decode } from "../src/index.js";
+import { decode, strict } from "../src/index.js";
 import { locate } from "../src/internal/path.js";
-import { nbtify } from "./nbt.js";
+import { decoded, nbtify } from "./nbt.js";
 
 const sample = await nbtify({
   Name: "Steve ✓",
@@ -18,17 +18,21 @@ const sample = await nbtify({
   Nested: [[new Int8(1)], [], [new Int8(2), new Int8(3)]],
 });
 
+const inferred = decoded(sample).codec;
+const codecs = [undefined, inferred, ...(inferred.tag === 10 ? [strict(inferred)] : [])];
+
 const mutation = fc.record({
+  codec: fc.constantFrom(...codecs),
   writes: fc.array(fc.tuple(fc.nat({ max: sample.length - 1 }), fc.nat({ max: 255 })), {
     maxLength: 4,
   }),
   end: fc.nat({ max: sample.length }),
 });
 
-test.prop([mutation])("decode errors match the path walker", ({ writes, end }) => {
+test.prop([mutation])("decode errors match the path walker", ({ codec, writes, end }) => {
   const bytes = sample.slice(0, end);
   for (const [at, value] of writes) bytes[at] = value;
-  const result = decode(bytes);
-  const located = locate(bytes, false);
+  const result = codec === undefined ? decode(bytes) : decode(bytes, codec);
+  const located = locate(bytes, false, codec);
   expect(result.ok ? undefined : result.error).toEqual(located);
 });

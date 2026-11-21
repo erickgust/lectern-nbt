@@ -30,6 +30,12 @@ export interface Inference {
   readonly compoundOf: (shape: Shape) => CompoundCodec;
   readonly listOf: (item: Codec) => ListCodec;
   readonly listOfEach: (codecs: readonly Codec[]) => Codec;
+  readonly resolve: (
+    base: CompoundCodec,
+    codecs: readonly Codec[],
+    extraKeys: readonly string[],
+    extraCodecs: readonly Codec[],
+  ) => CompoundCodec;
 }
 
 function node(key: string, codec: Codec, optional: boolean, parent?: Shape): Shape {
@@ -90,6 +96,10 @@ function compoundOf(shape: Shape): CompoundCodec {
   return shape.compound;
 }
 
+function strictIf(strict: boolean, codec: CompoundCodec): CompoundCodec {
+  return strict ? { ...codec, strict } : codec;
+}
+
 export function createInference(): Inference {
   const root = node("", EMPTY_LIST, false);
   const lists = new Map<Codec, ListCodec>();
@@ -127,7 +137,10 @@ export function createInference(): Inference {
       if (codec === undefined) return undefined;
       shape = child(shape, key, codec, optional || codecs.length < compounds.length);
     }
-    return compoundOf(shape);
+    return strictIf(
+      compounds.every((compound) => compound.strict),
+      compoundOf(shape),
+    );
   };
 
   const mergeAll = (codecs: readonly Codec[]): Codec | undefined => {
@@ -151,5 +164,19 @@ export function createInference(): Inference {
     return merged === undefined ? { tag: 9, items: codecs } : listOf(merged);
   };
 
-  return { root, find, add, compoundOf, listOf, listOfEach };
+  const resolve = (
+    base: CompoundCodec,
+    codecs: readonly Codec[],
+    extraKeys: readonly string[],
+    extraCodecs: readonly Codec[],
+  ): CompoundCodec => {
+    let shape = root;
+    for (const [i, key] of base.keys.entries()) {
+      shape = child(shape, key, codecs[i]!, base.optionals[i]!);
+    }
+    for (const [i, key] of extraKeys.entries()) shape = child(shape, key, extraCodecs[i]!, false);
+    return strictIf(base.strict, compoundOf(shape));
+  };
+
+  return { root, find, add, compoundOf, listOf, listOfEach, resolve };
 }

@@ -1,4 +1,20 @@
-import type { Codec, NbtValue } from "../codec.js";
+import type { Codec, CompoundCodec, ListCodec, NbtValue } from "../codec.js";
+import {
+  MAX_DEPTH,
+  ReadFailure,
+  arrayLength,
+  entryTag,
+  expectItem,
+  expectTag,
+  fail,
+  fieldIndex,
+  listHeader,
+  missingKey,
+  rootTag,
+  stringAt,
+  textAt,
+  type Indexes,
+} from "./checks.js";
 import {
   toBrand,
   type Byte,
@@ -22,30 +38,13 @@ import {
   STRING,
   createInference,
 } from "./infer.js";
-import { decodeString } from "./mutf8.js";
 
-export type ReadKind =
-  | "UnexpectedEnd"
-  | "BadTag"
-  | "NegativeLength"
-  | "TrailingBytes"
-  | "InvalidString"
-  | "DuplicateKey"
-  | "TooDeep";
-
-export class ReadFailure extends Error {
-  readonly kind: ReadKind;
-  readonly offset: number;
-
-  constructor(kind: ReadKind, offset: number) {
-    super(`${kind} at ${offset}`);
-    this.kind = kind;
-    this.offset = offset;
-  }
+export interface Tree {
+  readonly name: string;
+  readonly root: NbtValue;
+  readonly codec: Codec;
 }
 
-export const MAX_DEPTH = 512;
-export const MIN_SIZE: readonly number[] = [0, 1, 2, 4, 8, 4, 8, 4, 2, 5, 1, 4, 4];
 const HOST_LITTLE = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
 
 function swap32(x: number): number {
@@ -58,66 +57,21 @@ function copy(bytes: Uint8Array, start: number, end: number): ArrayBuffer {
   return result.buffer;
 }
 
-export function fail(kind: ReadKind, offset: number): never {
-  throw new ReadFailure(kind, offset);
+function assign(result: Record<string, NbtValue>, key: string, value: NbtValue): void {
+  Object.defineProperty(result, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
 }
 
-export function stringAt(bytes: Uint8Array, view: DataView, pos: number, little: boolean): number {
-  const end = pos + 2 + view.getUint16(pos, little);
-  if (end > bytes.length) fail("UnexpectedEnd", pos);
-  return end;
-}
-
-export function textAt(bytes: Uint8Array, pos: number, end: number): string {
-  return decodeString(bytes, pos + 2, end) ?? fail("InvalidString", pos);
-}
-
-export function arrayLength(view: DataView, pos: number, size: number, little: boolean): number {
-  const length = view.getInt32(pos, little);
-  if (length < 0) fail("NegativeLength", pos);
-  if (pos + 4 + length * size > view.byteLength) fail("UnexpectedEnd", pos);
-  return length;
-}
-
-export function listHeader(
-  bytes: Uint8Array,
-  view: DataView,
-  pos: number,
-  little: boolean,
-): number {
-  if (pos + 5 > bytes.length) fail("UnexpectedEnd", pos);
-  const type = bytes[pos]!;
-  const length = view.getInt32(pos + 1, little);
-  if (length < 0) fail("NegativeLength", pos);
-  if (type > 12 || (type === 0 && length > 0)) fail("BadTag", pos);
-  if (pos + 5 + length * MIN_SIZE[type]! > bytes.length) fail("UnexpectedEnd", pos);
-  return length;
-}
-
-export function entryTag(bytes: Uint8Array, pos: number): number {
-  const type = bytes[pos];
-  if (type === undefined) fail("UnexpectedEnd", pos);
-  if (type > 12) fail("BadTag", pos);
-  return type;
-}
-
-export function rootTag(bytes: Uint8Array): number {
-  const type = entryTag(bytes, 0);
-  if (type === 0) fail("BadTag", 0);
-  return type;
-}
-
-export interface Tree {
-  readonly name: string;
-  readonly root: NbtValue;
-  readonly codec: Codec;
-}
-
-export function readTree(bytes: Uint8Array, little: boolean): Tree {
+export function readTree(bytes: Uint8Array, little: boolean, expected?: Codec): Tree {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const swap = little !== HOST_LITTLE;
   const inference = createInference();
-  const { root: emptyShape, find, add, compoundOf, listOf, listOfEach } = inference;
+  const { root: emptyShape, find, add, compoundOf, listOf, listOfEach, resolve } = inference;
+  const indexes: Indexes = new Map();
   let pos = 0;
   let depth = 0;
   let codec: Codec = BYTE;
@@ -186,16 +140,8 @@ export function readTree(bytes: Uint8Array, little: boolean): Tree {
         if (Object.hasOwn(result, key)) fail("DuplicateKey", start);
         next = add(shape, key, codec, false);
       }
-      if (next.proto) {
-        Object.defineProperty(result, key, {
-          value,
-          writable: true,
-          enumerable: true,
-          configurable: true,
-        });
-      } else {
-        result[key] = value;
-      }
+      if (next.proto) assign(result, key, value);
+      else result[key] = value;
       shape = next;
     }
     pos++;
@@ -208,6 +154,90 @@ export function readTree(bytes: Uint8Array, little: boolean): Tree {
     const result = read();
     depth--;
     return result;
+  }
+
+  function typedList(listCodec: ListCodec): NbtValue[] {
+    const length = listHeader(bytes, view, pos, little);
+    const type = bytes[pos]!;
+    const item = listCodec.item;
+    expectItem(item, type, length, pos);
+    pos += 5;
+    const items = new Array<NbtValue>(length);
+    if (type !== 9 && type !== 10) {
+      for (let i = 0; i < length; i++) items[i] = payload(type);
+      codec = listCodec;
+      return items;
+    }
+    let codecs: Codec[] | undefined;
+    for (let i = 0; i < length; i++) {
+      items[i] = typed(type, item);
+      if (codecs !== undefined) codecs.push(codec);
+      else if (codec !== item) {
+        codecs = new Array<Codec>(i).fill(item);
+        codecs.push(codec);
+      }
+    }
+    codec = codecs === undefined ? listCodec : listOfEach(codecs);
+    return items;
+  }
+
+  function typedCompound(compoundCodec: CompoundCodec): Record<string, NbtValue> {
+    const result: Record<string, NbtValue> = {};
+    const { keys, codecs } = compoundCodec;
+    let resolved: Codec[] | undefined;
+    let extraKeys: string[] | undefined;
+    const extraCodecs: Codec[] = [];
+    let next = 0;
+    let seen = 0;
+    let ordered = true;
+    for (let type = entryTag(bytes, pos); type !== 0; type = entryTag(bytes, pos)) {
+      const start = pos++;
+      const key = string();
+      const inOrder = keys[next] === key;
+      ordered &&= inOrder;
+      const index = inOrder ? next : fieldIndex(indexes, compoundCodec, key);
+      let value: NbtValue;
+      if (index === -1) {
+        if (compoundCodec.strict) fail("UnknownKey", start);
+        value = payload(type);
+        (extraKeys ??= []).push(key);
+        extraCodecs.push(codec);
+      } else {
+        const field = codecs[index]!;
+        expectTag(field.tag, type, start);
+        value = typed(type, field);
+        if (codec !== field) (resolved ??= [...codecs])[index] = codec;
+        next = index + 1;
+        seen++;
+      }
+      if (!ordered && Object.hasOwn(result, key)) fail("DuplicateKey", start);
+      if (key === "__proto__") assign(result, key, value);
+      else result[key] = value;
+    }
+    const end = pos++;
+    if (
+      seen < keys.length &&
+      missingKey(compoundCodec, (key) => Object.hasOwn(result, key)) !== -1
+    ) {
+      fail("MissingKey", end);
+    }
+    codec =
+      resolved === undefined && extraKeys === undefined
+        ? compoundCodec
+        : resolve(compoundCodec, resolved ?? codecs, extraKeys ?? [], extraCodecs);
+    return result;
+  }
+
+  function typed(type: number, field: Codec): NbtValue {
+    if (field.tag === 10 || "item" in field) {
+      if (++depth > MAX_DEPTH) fail("TooDeep", pos);
+      const result = field.tag === 10 ? typedCompound(field) : typedList(field);
+      depth--;
+      return result;
+    }
+    const value = payload(type);
+    if (type !== 9) codec = field;
+    return value;
   }
 
   function payload(type: number): NbtValue {
@@ -283,9 +313,10 @@ export function readTree(bytes: Uint8Array, little: boolean): Tree {
 
   try {
     const type = rootTag(bytes);
+    if (expected !== undefined) expectTag(expected.tag, type, 0);
     pos = 1;
     const name = string();
-    const root = payload(type);
+    const root = expected === undefined ? payload(type) : typed(type, expected);
     if (pos !== bytes.length) fail("TrailingBytes", pos);
     return { name, root, codec };
   } catch (error) {
