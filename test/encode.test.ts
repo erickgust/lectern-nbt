@@ -1,6 +1,6 @@
 import { fc, test } from "@fast-check/vitest";
 import { MUtf8Encoder } from "mutf-8";
-import { Float32, Int16, Int32, Int8, type RootTagLike, type Tag } from "nbtify";
+import { Float32, Int16, Int32, Int8, read, type RootTagLike, type Tag } from "nbtify";
 import { expect, it } from "vitest";
 import {
   byte,
@@ -30,6 +30,7 @@ import {
   named,
   nbtify,
   root,
+  unwrap,
   utf,
 } from "./nbt.js";
 
@@ -54,6 +55,12 @@ const errorOf = (codec: Codec, value: unknown): EncodeError | undefined => {
 it.each(fixtures)("writes the %s fixture back byte for byte", (name) => {
   const bytes = fixture(name);
   expect(Buffer.from(encoded(decoded(bytes))).equals(Buffer.from(bytes))).toBe(true);
+});
+
+it.each(fixtures)("encodes the %s fixture identically with a cloned codec", (name) => {
+  const doc = decoded(fixture(name));
+  const clone = encoded({ ...doc, codec: structuredClone(doc.codec) });
+  expect(Buffer.from(clone).equals(Buffer.from(encoded(doc)))).toBe(true);
 });
 
 it.each(fixtures)("converts the %s fixture to little-endian and back", (name) => {
@@ -226,14 +233,25 @@ const leaves: fc.Arbitrary<Tag>[] = [
 const lists = (items: readonly fc.Arbitrary<Tag>[]): fc.Arbitrary<Tag>[] =>
   items.map((item) => fc.array(item, { maxLength: 4 }));
 
-function tree(depth: number): fc.Arbitrary<Tag> {
+function tree(depth: number, key: fc.Arbitrary<string>): fc.Arbitrary<Tag> {
   if (depth === 0) return fc.oneof(...leaves, ...lists(leaves));
-  const record: fc.Arbitrary<Tag> = fc.dictionary(fc.string(), tree(depth - 1), { maxKeys: 4 });
+  const record: fc.Arbitrary<Tag> = fc.dictionary(key, tree(depth - 1, key), { maxKeys: 4 });
   const items = [...leaves, record, ...lists(leaves)];
   return fc.oneof(...items, ...lists(items));
 }
 
-const rootTag: fc.Arbitrary<RootTagLike> = fc.dictionary(fc.string(), tree(2), { maxKeys: 6 });
+const rootOf = (key: fc.Arbitrary<string>): fc.Arbitrary<RootTagLike> =>
+  fc.dictionary(key, tree(2, key), { maxKeys: 6 });
+const rootTag = rootOf(fc.string());
+
+test.prop([rootOf(fc.string().filter((key) => key !== "__proto__"))])(
+  "decodes random trees like NBTify",
+  async (value) => {
+    const bytes = await nbtify(value);
+    const theirs = await read(bytes, { rootName: true, endian: "big", compression: null });
+    expect(decoded(bytes).root).toEqual(unwrap(theirs.data));
+  },
+);
 
 test.prop([rootTag])("round-trips random trees", async (value) => {
   const doc = decoded(await nbtify(value));
