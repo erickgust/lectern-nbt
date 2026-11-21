@@ -16,6 +16,7 @@ const sample = await nbtify({
   UUID: new Int32Array([1, 2, 3, 4]),
   Seen: new BigInt64Array([5n]),
   Nested: [[new Int8(1)], [], [new Int8(2), new Int8(3)]],
+  Mixed: [[new Int8(1)], ["a"]],
 });
 
 const inferred = decoded(sample).codec;

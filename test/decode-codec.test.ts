@@ -16,6 +16,7 @@ import {
   strict,
   string,
   type Codec,
+  type MixedListCodec,
   type NbtDocument,
 } from "../src/index.js";
 import { decoded, fixture, fixtures, int32, named, nbtify, root, utf } from "./nbt.js";
@@ -24,6 +25,7 @@ const Item = compound({ id: string, Count: byte, Slot: optional(byte) });
 const Player = compound({ Name: string, Health: float, Pos: list(double), Inventory: list(Item) });
 const Small = compound({ a: int, l: list(byte), s: optional(string) });
 const Abc = compound({ a: byte, b: byte, c: byte });
+const mixed: MixedListCodec = { tag: 9, items: [list(byte), list(string)] };
 
 function decodedWith<C extends Codec>(bytes: Uint8Array, codec: C): NbtDocument<C> {
   const result = decode(bytes, codec);
@@ -94,6 +96,17 @@ it.each(fixtures)("decodes the %s fixture again with its own inferred codec", (n
   expect(decodedWith(bytes, codec).codec).toBe(codec);
 });
 
+it("returns an inferred codec with a mixed list unchanged", async () => {
+  const bytes = await nbtify({ L: [[new Int8(1)], ["a"]] });
+  const { codec } = decoded(bytes);
+  expect(decodedWith(bytes, codec).codec).toBe(codec);
+});
+
+it("infers a list whose length differs from its mixed codec", async () => {
+  const doc = decodedWith(await nbtify({ L: [[new Int8(1)], ["a"], []] }), compound({ L: mixed }));
+  expect(doc.root.L).toHaveLength(3);
+});
+
 it("treats an inferred empty list codec as any list", async () => {
   const { codec } = decoded(await nbtify({ L: [] }));
   const doc = decodedWith(await nbtify({ L: [new Int8(1)] }), codec);
@@ -134,6 +147,12 @@ it.each([
       ),
     ),
     { kind: "TagMismatch", expected: "byte", found: "short", offset: 20, path: ["L", 0, "Count"] },
+  ],
+  [
+    "a mixed list element with another item tag",
+    compound({ L: mixed }),
+    root(...named(9, "L", 9, ...int32(2), 8, ...int32(1), ...utf("a"), 1, ...int32(1), 1)),
+    { kind: "TagMismatch", expected: "byte", found: "string", offset: 12, path: ["L", 0] },
   ],
   [
     "a repeated first key",

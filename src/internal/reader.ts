@@ -1,4 +1,4 @@
-import type { Codec, CompoundCodec, ListCodec, NbtValue } from "../codec.js";
+import type { Codec, CompoundCodec, ListCodec, MixedListCodec, NbtValue } from "../codec.js";
 import {
   MAX_DEPTH,
   ReadFailure,
@@ -181,6 +181,27 @@ export function readTree(bytes: Uint8Array, little: boolean, expected?: Codec): 
     return items;
   }
 
+  function typedItems(mixed: MixedListCodec): NbtValue[] {
+    const length = listHeader(bytes, view, pos, little);
+    if (length !== mixed.items.length) return list();
+    const type = bytes[pos]!;
+    for (const item of mixed.items) expectTag(item.tag, type, pos);
+    pos += 5;
+    const items = new Array<NbtValue>(length);
+    let codecs: Codec[] | undefined;
+    for (let i = 0; i < length; i++) {
+      const item = mixed.items[i]!;
+      items[i] = typed(type, item);
+      if (codecs !== undefined) codecs.push(codec);
+      else if (codec !== item) {
+        codecs = mixed.items.slice(0, i);
+        codecs.push(codec);
+      }
+    }
+    codec = codecs === undefined ? mixed : listOfEach(codecs);
+    return items;
+  }
+
   function typedCompound(compoundCodec: CompoundCodec): Record<string, NbtValue> {
     const result: Record<string, NbtValue> = {};
     const { keys, codecs } = compoundCodec;
@@ -229,14 +250,16 @@ export function readTree(bytes: Uint8Array, little: boolean, expected?: Codec): 
   }
 
   function typed(type: number, field: Codec): NbtValue {
-    if (field.tag === 10 || "item" in field) {
+    if (field.tag === 9 || field.tag === 10) {
       if (++depth > MAX_DEPTH) fail("TooDeep", pos);
-      const result = field.tag === 10 ? typedCompound(field) : typedList(field);
+      let result: NbtValue;
+      if (field.tag === 10) result = typedCompound(field);
+      else result = "item" in field ? typedList(field) : typedItems(field);
       depth--;
       return result;
     }
     const value = payload(type);
-    if (type !== 9) codec = field;
+    codec = field;
     return value;
   }
 

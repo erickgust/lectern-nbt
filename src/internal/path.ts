@@ -1,4 +1,4 @@
-import type { Codec, CompoundCodec } from "../codec.js";
+import type { Codec, CompoundCodec, ListCodec, MixedListCodec } from "../codec.js";
 import type { DecodeError } from "../result.js";
 import {
   MAX_DEPTH,
@@ -39,14 +39,20 @@ export function locate(
     return text;
   }
 
-  function list(item: Codec | undefined): void {
+  function list(codec: ListCodec | MixedListCodec | undefined): void {
     const length = listHeader(bytes, view, pos, little);
     const type = bytes[pos]!;
+    const item = codec !== undefined && "item" in codec ? codec.item : undefined;
+    const items =
+      codec !== undefined && "items" in codec && codec.items.length === length
+        ? codec.items
+        : undefined;
     if (item !== undefined) expectItem(item, type, length, pos);
+    for (const each of items ?? []) expectTag(each.tag, type, pos);
     pos += 5;
     for (let i = 0; i < length; i++) {
       path.push(i);
-      skip(type, item);
+      skip(type, item ?? items?.[i]);
       path.pop();
     }
   }
@@ -85,7 +91,7 @@ export function locate(
       string();
     } else if (type === 9 || type === 10) {
       if (++depth > MAX_DEPTH) fail("TooDeep", pos);
-      if (type === 9) list(codec !== undefined && "item" in codec ? codec.item : undefined);
+      if (type === 9) list(codec?.tag === 9 ? codec : undefined);
       else compound(codec?.tag === 10 ? codec : undefined);
       depth--;
     } else {
