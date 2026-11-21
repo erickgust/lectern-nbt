@@ -54,7 +54,8 @@
         "eslint/no-plusplus": "off",
         "eslint/no-param-reassign": "off",
         "unicorn/prefer-code-point": "off",
-        "unicorn/no-new-array": "off"
+        "unicorn/no-new-array": "off",
+        "eslint/max-lines-per-function": "off"
       }
     },
     {
