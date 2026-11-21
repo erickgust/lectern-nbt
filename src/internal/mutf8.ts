@@ -6,8 +6,8 @@ function continuation(bytes: Uint8Array, i: number): number {
   return (b & 0xc0) === 0x80 ? b & 0x3f : -1;
 }
 
-function codeUnits(bytes: Uint8Array, start: number, end: number): Uint16Array | undefined {
-  const units = new Uint16Array(end - start);
+function codeUnits(bytes: Uint8Array, start: number, end: number): number[] | undefined {
+  const units = new Array<number>(end - start);
   let length = 0;
   let i = start;
   while (i < end) {
@@ -43,15 +43,17 @@ function codeUnits(bytes: Uint8Array, start: number, end: number): Uint16Array |
       return undefined;
     }
   }
-  return units.subarray(0, length);
+  units.length = length;
+  return units;
 }
 
 export function decodeMutf8(bytes: Uint8Array, start: number, end: number): string | undefined {
   const units = codeUnits(bytes, start, end);
   if (units === undefined) return undefined;
+  if (units.length <= CHUNK) return String.fromCharCode.apply(null, units);
   const parts: string[] = [];
   for (let i = 0; i < units.length; i += CHUNK) {
-    parts.push(String.fromCharCode(...units.subarray(i, i + CHUNK)));
+    parts.push(String.fromCharCode.apply(null, units.slice(i, i + CHUNK)));
   }
   return parts.join("");
 }
