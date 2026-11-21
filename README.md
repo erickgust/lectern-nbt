@@ -75,17 +75,17 @@ if (doc.ok) console.log(print(doc.value.codec));
 
 ## API
 
-| Function                                                          | What it does                                                                      |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `read(bytes, codec?, { compression?, endian? })`                  | Detect, decompress and decode a whole file. Async.                                |
-| `write(file)`                                                     | Encode and compress a file with its own codec, byte order and compression. Async. |
-| `decode(bytes, codec?, { endian? })`                              | Decode uncompressed bytes. Without a codec, infers one.                           |
-| `encode(doc)`                                                     | Encode a document with `doc.codec` and `doc.endian`.                              |
-| `check(bytes, codec?, { endian? })`                               | Check the structure without building values. Returns the same error as `decode`.  |
-| `validate(value, codec)`                                          | Check a value you don't control against a codec, with `encode`'s rules.           |
-| `detect(bytes)`                                                   | Find the compression and byte order from the first bytes.                         |
-| `compress(bytes, compression)` / `decompress(bytes, compression)` | gzip, zlib or `"none"`. Async.                                                    |
-| `print(codec)`                                                    | Print a codec as TypeScript source.                                               |
+| Function                                                                        | What it does                                                                      |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `read(bytes, codec?, { compression?, endian?, maxSize? })`                      | Detect, decompress and decode a whole file. Async.                                |
+| `write(file)`                                                                   | Encode and compress a file with its own codec, byte order and compression. Async. |
+| `decode(bytes, codec?, { endian? })`                                            | Decode uncompressed bytes. Without a codec, infers one.                           |
+| `encode(doc)`                                                                   | Encode a document with `doc.codec` and `doc.endian`.                              |
+| `check(bytes, codec?, { endian? })`                                             | Check the structure without building values. Returns the same error as `decode`.  |
+| `validate(value, codec)`                                                        | Check a value you don't control against a codec, with `encode`'s rules.           |
+| `detect(bytes)`                                                                 | Find the compression and byte order from the first bytes.                         |
+| `compress(bytes, compression)` / `decompress(bytes, compression, { maxSize? })` | gzip, zlib or `"none"`. Async.                                                    |
+| `print(codec)`                                                                  | Print a codec as TypeScript source.                                               |
 
 Codec builders: `compound`, `list`, `optional`, `strict` (extra keys become an error), `extend`, and the leaves `byte`, `short`, `int`, `long`, `float`, `double`, `string`, `byteArray`, `intArray` and `longArray`. Each number leaf is also a checked constructor: `int(5)`, `float(20)`, `long(5n)`, `double.of(0, 70, 0)`. `int(7.5)` is a compile error, and `byte(300)` throws a `RangeError`. The array leaves build typed arrays with every element checked: `intArray(1, 2, 3)` and `intArray.from(iterable)`.
 
@@ -93,15 +93,16 @@ Codec builders: `compound`, `list`, `optional`, `strict` (extra keys become an e
 
 `decode`, `check`, `encode`, `validate`, `detect` and `print` never throw, and `read`, `write`, `compress` and `decompress` never reject. Each function's error type holds exactly the kinds it can return, so an exhaustive `switch` lists only cases that can happen:
 
-| kind                                                                          | When                                                                                  |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `UnexpectedEnd`, `BadTag`, `NegativeLength`, `TrailingBytes`, `InvalidString` | The bytes aren't valid NBT.                                                           |
-| `DuplicateKey`                                                                | A compound repeats a key.                                                             |
-| `TagMismatch`                                                                 | The data disagrees with the codec. Includes `expected` and `found`.                   |
-| `MissingKey`, `UnknownKey`                                                    | A required key is absent, or a key isn't in the codec (on encode, or under `strict`). |
-| `TooDeep`                                                                     | Nesting goes past 512 levels.                                                         |
-| `OutOfRange`, `StringTooLong`                                                 | A number or string can't be written.                                                  |
-| `UnknownFormat`, `CompressionFailed`                                          | The file isn't recognised, or decompression failed.                                   |
+| kind                                                                          | When                                                                                                           |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `UnexpectedEnd`, `BadTag`, `NegativeLength`, `TrailingBytes`, `InvalidString` | The bytes aren't valid NBT.                                                                                    |
+| `DuplicateKey`                                                                | A compound repeats a key.                                                                                      |
+| `TagMismatch`                                                                 | The data disagrees with the codec. Includes `expected` and `found`.                                            |
+| `MissingKey`, `UnknownKey`                                                    | A required key is absent, or a key isn't in the codec (on encode, or under `strict`).                          |
+| `TooDeep`                                                                     | Nesting goes past 512 levels.                                                                                  |
+| `OutOfRange`, `StringTooLong`                                                 | A number or string can't be written.                                                                           |
+| `UnknownFormat`, `CompressionFailed`                                          | The file isn't recognised, or decompression failed.                                                            |
+| `TooLarge`                                                                    | Decompressing would produce more than `maxSize` bytes: 256 MiB unless set, and `Infinity` turns the limit off. |
 
 ### Limitations
 
@@ -109,7 +110,6 @@ Codec builders: `compound`, `list`, `optional`, `strict` (extra keys become an e
 - A float or double `NaN` may lose its payload bits in a round trip.
 - Round trips are byte-exact when the compounds in a list share key order and empty lists are End-typed, which is how Minecraft writes files. The data is always equal, but a list element whose keys were in another order comes back in the merged codec's order.
 - `print` can't keep the order of integer-like keys (`"0"`, `"12"`), because JavaScript orders them numerically in object literals.
-- `decompress` and `read` don't limit the decompressed size.
 - Bedrock `level.dat` files, which have an 8-byte header, and Bedrock network NBT, which uses varints, aren't supported yet.
 
 ## Benchmarks
