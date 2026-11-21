@@ -19,9 +19,13 @@ export interface Shape {
   readonly parent: Shape | undefined;
   readonly proto: boolean;
   sibling: Shape | undefined;
-  children: Shape | Map<string, Shape> | undefined;
+  children: Shape | Map<string, Shape | Variants> | undefined;
   compound: CompoundCodec | undefined;
 }
+
+type Variants = Map<Codec, Shape>;
+
+const LINKED_VARIANTS = 4;
 
 export interface Inference {
   readonly root: Shape;
@@ -53,25 +57,55 @@ function node(key: string, codec: Codec, optional: boolean, parent?: Shape): Sha
 
 function find(shape: Shape, key: string, codec: Codec, optional: boolean): Shape | undefined {
   const children = shape.children;
-  let next =
+  const entry =
     children instanceof Map ? children.get(key) : children?.key === key ? children : undefined;
+  let next = entry instanceof Map ? entry.get(codec) : entry;
   while (next !== undefined && (next.codec !== codec || next.optional !== optional)) {
     next = next.sibling;
   }
   return next;
 }
 
+function linked(head: Shape): number {
+  let count = 0;
+  for (let s: Shape | undefined = head; s !== undefined; s = s.sibling) count++;
+  return count;
+}
+
+function variants(head: Shape): Variants {
+  const byCodec: Variants = new Map();
+  for (let s: Shape | undefined = head; s !== undefined;) {
+    const following: Shape | undefined = s.sibling;
+    s.sibling = byCodec.get(s.codec);
+    byCodec.set(s.codec, s);
+    s = following;
+  }
+  return byCodec;
+}
+
+function link(next: Shape, head: Shape | undefined): Shape | Variants {
+  next.sibling = head;
+  return head !== undefined && linked(next) > LINKED_VARIANTS ? variants(next) : next;
+}
+
 function add(shape: Shape, key: string, codec: Codec, optional: boolean): Shape {
   const next = node(key, codec, optional, shape);
   const children = shape.children;
-  if (children instanceof Map) {
-    next.sibling = children.get(key);
-    children.set(key, next);
-  } else if (children === undefined || children.key === key) {
-    next.sibling = children;
+  if (children === undefined) {
     shape.children = next;
+  } else if (children instanceof Map) {
+    const entry = children.get(key);
+    if (entry instanceof Map) {
+      next.sibling = entry.get(codec);
+      entry.set(codec, next);
+    } else {
+      children.set(key, link(next, entry));
+    }
+  } else if (children.key === key) {
+    const entry = link(next, children);
+    shape.children = entry instanceof Map ? new Map([[key, entry]]) : entry;
   } else {
-    shape.children = new Map([
+    shape.children = new Map<string, Shape | Variants>([
       [children.key, children],
       [key, next],
     ]);

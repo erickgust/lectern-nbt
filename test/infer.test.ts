@@ -125,6 +125,6 @@ it("merges many list compounds with unique keys in linear time", () => {
 });
 
 it("merges unique keys nested one compound deep in linear time", () => {
-  const merged = fields(itemOf(fields(decoded(wide(20_000, nested)).codec)[0]?.[1]));
-  expect(fields(merged[0]?.[1])).toHaveLength(20_000);
+  const merged = fields(itemOf(fields(decoded(wide(80_000, nested)).codec)[0]?.[1]));
+  expect(fields(merged[0]?.[1])).toHaveLength(80_000);
 });
