@@ -1,6 +1,6 @@
 # lectern-nbt
 
-A TypeScript library for reading and writing Minecraft's NBT format. ESM only, no runtime dependencies. It runs on Node 22+, Bun, Deno and browsers. `README.md` is the user-facing reference; `plan.md` is the maintainer's design document and milestone log.
+A TypeScript library for reading and writing Minecraft's NBT format. ESM only, no runtime dependencies. It runs on Node 22+, Bun, Deno and browsers. `README.md` is the user-facing reference.
 
 ## Layout
 
