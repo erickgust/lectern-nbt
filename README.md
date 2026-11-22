@@ -164,21 +164,6 @@ const raw = await decompress(bytes, "gzip");
 if (raw.ok && check(raw.value, Player).ok) console.log("valid player file");
 ```
 
-### Lower-level functions
-
-`read` and `write` cover whole files. The pieces are exported too:
-
-```ts
-import { compress, decode, decompress, detect, encode } from "lectern-nbt";
-
-const format = detect(bytes);
-const raw = await decompress(bytes, "gzip", { maxSize: 64 * 1024 * 1024 });
-const doc = decode(raw.ok ? raw.value : bytes, Player, { endian: "little" });
-const out = doc.ok ? encode({ ...doc.value, endian: "big" }) : undefined;
-```
-
-`decode` and `encode` work on uncompressed NBT. Changing `endian` on a document converts it between Java (big-endian) and Bedrock (little-endian) byte order.
-
 ## API
 
 | Function                                                                        | What it does                                                                      |
@@ -192,6 +177,8 @@ const out = doc.ok ? encode({ ...doc.value, endian: "big" }) : undefined;
 | `detect(bytes)`                                                                 | Find the compression and byte order from the first bytes.                         |
 | `compress(bytes, compression)` / `decompress(bytes, compression, { maxSize? })` | gzip, zlib or `"none"`. Async.                                                    |
 | `print(codec)`                                                                  | Print a codec as TypeScript source.                                               |
+
+`decode` and `encode` work on uncompressed NBT. Changing `endian` on a document converts it between Java (big-endian) and Bedrock (little-endian) byte order.
 
 ### Errors
 
@@ -217,35 +204,21 @@ const out = doc.ok ? encode({ ...doc.value, endian: "big" }) : undefined;
 
 ## Benchmarks
 
-Node 26.13, uncompressed synthetic fixtures from `bench/fixtures`, average time per call measured with mitata. NBTify 2.2.0 and prismarine-nbt 2.8.0 decode the same bytes. Run them with `bun run bench` and `bun run bench:memory`.
+Node 26.13, uncompressed synthetic fixtures from `bench/fixtures`, average time per call measured with mitata. NBTify 2.2.0 and prismarine-nbt 2.8.0 run on the same files. Run them with `bun run bench` and `bun run bench:memory`.
 
-### Decode
+### Speed
 
-| File             | lectern-nbt | with a codec | NBTify  | prismarine-nbt |
-| ---------------- | ----------- | ------------ | ------- | -------------- |
-| entities, 527 KB | 3.5 ms      | 3.6 ms       | 6.1 ms  | 4.8 ms         |
-| chunks, 305 KB   | 0.10 ms     | 0.10–0.20 ms | 1.6 ms  | 1.1 ms         |
-| strings, 157 KB  | 1.1 ms      | 1.0 ms       | 0.99 ms | 1.2 ms         |
+Decode / encode time per call:
+
+| File             | lectern-nbt    | NBTify        | prismarine-nbt |
+| ---------------- | -------------- | ------------- | -------------- |
+| entities, 527 KB | 3.5 / 1.2 ms   | 6.1 / 3.3 ms  | 4.8 / 3.6 ms   |
+| chunks, 305 KB   | 0.10 / 0.13 ms | 1.6 / 0.38 ms | 1.1 / 0.48 ms  |
+| strings, 157 KB  | 1.1 / 0.57 ms  | 0.99 / 1.3 ms | 1.2 / 1.4 ms   |
 
 lectern-nbt decodes the entities file 1.8× faster than NBTify and 1.4× faster than prismarine-nbt. The chunks file is mostly long arrays, which lectern-nbt reads as typed arrays straight from the bytes: 17× faster than NBTify. The strings file, one compound with 5,000 keys, is a tie.
 
-### Encode
-
-| File     | lectern-nbt | NBTify  | prismarine-nbt |
-| -------- | ----------- | ------- | -------------- |
-| entities | 1.2 ms      | 3.3 ms  | 3.6 ms         |
-| chunks   | 0.13 ms     | 0.38 ms | 0.48 ms        |
-| strings  | 0.57 ms     | 1.3 ms  | 1.4 ms         |
-
 lectern-nbt encodes 2.3× to 3.7× faster than either.
-
-### Check
-
-| File     | `check` | `check` with a codec | `decode` |
-| -------- | ------- | -------------------- | -------- |
-| entities | 0.62 ms | 0.99 ms              | 3.5 ms   |
-| chunks   | 1.6 µs  | 2.5 µs               | 0.10 ms  |
-| strings  | 0.35 ms | 0.46 ms              | 1.1 ms   |
 
 ### Memory
 
@@ -289,37 +262,11 @@ Pick NBTify if you need SNBT, raw deflate or network NBT today. Pick prismarine-
 
 ## Roadmap
 
-### Done
-
-- [x] Java edition big-endian decode/encode
-- [x] Little-endian (Bedrock) decode/encode
-- [x] gzip / zlib via DecompressionStream / CompressionStream
-- [x] detect (compression + endianness)
-- [x] read / write (whole files, compression and endianness kept)
-- [x] Bedrock level.dat header
-- [x] Structure-only fast path (check)
-- [x] Codec builders, Infer, validate, extend, strict, optional
-- [x] Number/array constructors with range checks
-- [x] Codec inference
-- [x] Paths on every error
-- [x] print (codec → TypeScript source)
-
-### Next
-
 - [ ] SNBT parse / stringify
 - [ ] Varint (network) NBT
 - [ ] Nameless root (Java network NBT, 1.20.2+)
 - [ ] LevelDB values: several roots back to back (Bedrock chunk data)
-- [ ] Region files (.mca); quansync becomes a candidate here, and only here
+- [ ] Region files (.mca)
 - [ ] pick: schema-guided read that skips unrequested fields (fast, lossy, not writable back)
 - [ ] oneOf codec (fields whose tag changed across Minecraft versions)
-- [ ] compile(codec): generated decoders, opt-in, only if benchmarks justify
 - [ ] CLI: `lectern-nbt infer level.dat > level.ts`
-- [ ] Columnar (FlatNbt-style) reader, only if nbt-editor profiling shows flattening is the bottleneck
-- [ ] Opt-in brands for specific fields, if ever needed
-
-### Not planned
-
-- Node `Buffer` APIs
-- CommonJS build
-- Runtime FP library (Effect, fp-ts, neverthrow)
